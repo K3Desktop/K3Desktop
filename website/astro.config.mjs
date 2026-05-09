@@ -7,7 +7,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'K3Desktop',
-      description: 'Desktop GUI for managing k3d Kubernetes clusters',
+      description: 'Desktop GUI for managing k3d Kubernetes clusters on Windows, macOS, and Linux.',
       logo: {
         src: './public/favicon.svg',
       },
