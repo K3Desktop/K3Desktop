@@ -3,7 +3,7 @@ import starlight from '@astrojs/starlight';
 
 export default defineConfig({
   site: 'https://k3desktop.github.io',
-  base: '/k3desktop',
+  base: '/',
   integrations: [
     starlight({
       title: 'K3Desktop',
