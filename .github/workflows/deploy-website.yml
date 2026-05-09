@@ -40,7 +40,7 @@ jobs:
       - name: Deploy to Documentation Repo
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ steps.generate_token.outputs.token }}
+          personal_token: ${{ steps.generate_token.outputs.token }}
           external_repository: K3Desktop/k3desktop.github.io
           publish_branch: main
           publish_dir: ./website/dist
