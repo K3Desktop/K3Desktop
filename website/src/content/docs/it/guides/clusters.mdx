@@ -1,0 +1,49 @@
+---
+title: Gestione Cluster
+description: Crea, avvia, ferma ed elimina cluster k3d con K3Desktop.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Panoramica
+
+La pagina **Clusters** è la schermata principale di K3Desktop. Elenca tutti i cluster k3d sulla tua macchina e permette di crearne di nuovi o gestire quelli esistenti.
+
+## Creazione di un Cluster
+
+Clicca su **Nuovo Cluster** per aprire la finestra di creazione. Sono disponibili due modalità:
+
+### Modalità Semplice
+
+Compila:
+- **Nome** — identificativo univoco del cluster (minuscolo, senza spazi)
+- **Server** — numero di nodi control-plane (default: 1)
+- **Agent** — numero di nodi worker (default: 0)
+- **Immagine k3s** — versione Kubernetes (lascia vuoto per l'ultima)
+- **Porta API** — porta host mappata sull'API server k3s (lascia vuoto per assegnazione automatica)
+
+### Modalità Avanzata
+
+Editor YAML completo con evidenziazione sintassi, linting e auto-indentazione.
+Usa il [formato file di configurazione k3d](https://k3d.io/stable/usage/configfile/).
+
+<Aside type="tip">
+La modalità avanzata è utile per setup cluster riproducibili — salva il tuo YAML sotto version control.
+</Aside>
+
+## Avanzamento Creazione Cluster
+
+La creazione del cluster è asincrona. Un indicatore di avanzamento appare mentre k3d provvede al provisioning. Se la creazione fallisce, K3Desktop effettua automaticamente il rollback delle risorse parzialmente create.
+
+## Azioni Cluster
+
+| Azione | Descrizione |
+|--------|-------------|
+| **Avvia** | Avvia un cluster fermo |
+| **Ferma** | Ferma un cluster attivo (i dati vengono preservati) |
+| **Elimina** | Elimina definitivamente il cluster e tutti i suoi nodi |
+| **Esporta Kubeconfig** | Unisce le credenziali del cluster in `~/.kube/config` |
+
+<Aside type="caution">
+Eliminare un cluster rimuove tutti i workload e i dati persistenti al suo interno. Questa operazione è irreversibile.
+</Aside>

@@ -1,0 +1,36 @@
+---
+title: Gestione Nodi
+description: Aggiungi, avvia, ferma e rimuovi nodi nei cluster k3d.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Panoramica
+
+La pagina **Nodes** mostra tutti i nodi del cluster selezionato, inclusi il loro ruolo (server/agent) e lo stato attuale (in esecuzione/fermo).
+
+## Aggiunta di un Nodo Agent
+
+Clicca su **Aggiungi Nodo** per collegare un nuovo nodo agent (worker) al cluster selezionato.
+Il nuovo nodo si unisce subito al cluster ed è visibile con `kubectl get nodes`.
+
+## Azioni Nodo
+
+| Azione | Descrizione |
+|--------|-------------|
+| **Avvia** | Avvia un nodo fermo |
+| **Ferma** | Ferma un nodo attivo |
+| **Elimina** | Rimuove un nodo agent dal cluster |
+
+<Aside type="caution">
+I nodi server (control-plane) non possono essere eliminati singolarmente. Per rimuovere un nodo server, elimina l'intero cluster.
+</Aside>
+
+## Ruoli Nodo
+
+- **server** — nodo control-plane k3s. Esegue API server, scheduler e controller manager.
+- **agent** — nodo worker k3s. Esegue i workload (pod). Puoi aggiungerli e rimuoverli liberamente.
+
+## Scalare i Workload
+
+Aggiungere nodi aumenta la capacità del cluster per schedulare pod. Utile per testare regole di affinità, DaemonSet o limiti di risorse.

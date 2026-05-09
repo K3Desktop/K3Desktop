@@ -1,0 +1,69 @@
+---
+title: Blueprints
+description: Define and deploy reusable Helm application stacks with K3Desktop Blueprints.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+**Blueprints** are reusable Helm deployment templates stored locally at
+`~/.config/k3desktop/blueprints/`. A blueprint defines one or more Helm charts
+to install together, forming a complete application stack.
+
+## Creating a Blueprint
+
+Click **New Blueprint** and fill in:
+
+- **Name** — blueprint identifier (becomes the filename `<name>.yaml`)
+- **Charts** — one or more Helm charts with their configuration
+
+Each chart entry includes:
+- **Chart** — Helm chart reference (e.g. `stable/nginx-ingress`, OCI ref, or local path)
+- **Release name** — Helm release name in the target cluster
+- **Namespace** — Kubernetes namespace (created if it doesn't exist)
+- **Values** — inline YAML values (equivalent to `-f values.yaml`)
+
+Example blueprint YAML:
+
+```yaml
+name: monitoring-stack
+charts:
+  - chart: prometheus-community/kube-prometheus-stack
+    release: prometheus
+    namespace: monitoring
+    values: |
+      grafana:
+        enabled: true
+        adminPassword: admin
+  - chart: prometheus-community/prometheus-adapter
+    release: prometheus-adapter
+    namespace: monitoring
+```
+
+## Deploying a Blueprint
+
+1. Open the blueprint
+2. Click **Deploy**
+3. Select the target cluster
+4. K3Desktop runs Helm upgrade-or-install for each chart in order
+
+Deployment runs asynchronously. Progress and errors appear in the log panel.
+
+<Aside type="tip">
+Blueprints use upgrade-or-install logic: if the release already exists it is upgraded,
+otherwise it is freshly installed with namespace creation enabled.
+</Aside>
+
+## Managing Blueprints
+
+| Action | Description |
+|--------|-------------|
+| **Save** | Persist changes to `~/.config/k3desktop/blueprints/<name>.yaml` |
+| **Delete** | Remove the blueprint file (does not uninstall deployed releases) |
+| **Deploy** | Run Helm install/upgrade for all charts in the blueprint |
+
+<Aside type="caution">
+Deleting a blueprint does not remove the Helm releases already deployed to your clusters.
+Use `helm uninstall` or kubectl to clean those up.
+</Aside>

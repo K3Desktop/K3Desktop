@@ -1,0 +1,50 @@
+---
+title: Registres Locaux
+description: Créer et gérer des registres de conteneurs k3d locaux.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Vue d'ensemble
+
+K3Desktop vous permet de créer des registres de conteneurs k3d locaux — des registres compatibles Docker privés qui fonctionnent entièrement sur votre machine. Pas de limites Docker Hub, pas de credentials nécessaires.
+
+## Création d'un Registre
+
+Cliquez sur **Nouveau Registre** et remplissez :
+
+- **Nom** — identifiant du registre (devient le nom d'hôte `k3d-<nom>`)
+- **Port** — port hôte pour le registre (laisser vide pour attribution aléatoire)
+
+Après création, le registre est accessible sur `localhost:<port>` depuis votre machine.
+
+## Utiliser un Registre avec un Cluster
+
+Pour permettre à un cluster de tirer des images depuis le registre local, le registre doit être sur le même réseau k3d que le cluster. Reliez-les en référencant le registre dans la config du cluster :
+
+```yaml
+# config cluster k3d
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+registries:
+	use:
+		- k3d-monRegistre:5000
+```
+
+## Pousser des Images
+
+```bash
+# Taguer et pousser vers le registre local
+docker tag myapp:latest k3d-monRegistre:5000/myapp:latest
+docker push k3d-monRegistre:5000/myapp:latest
+```
+
+Votre cluster peut maintenant tirer directement `k3d-monRegistre:5000/myapp:latest`.
+
+## Suppression d'un Registre
+
+Cliquez sur **Supprimer** sur la ligne du registre. K3Desktop déconnecte le registre de tous les réseaux de cluster avant suppression pour éviter les erreurs d'endpoint en suspens.
+
+<Aside type="tip">
+Les registres sont persistants — ils survivent aux redémarrages de cluster et peuvent être partagés entre plusieurs clusters.
+</Aside>

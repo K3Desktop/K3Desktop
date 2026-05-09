@@ -1,0 +1,36 @@
+---
+title: Gestion des Nœuds
+description: Ajouter, démarrer, arrêter et supprimer des nœuds dans les clusters k3d.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Vue d'ensemble
+
+La page **Nodes** affiche tous les nœuds du cluster sélectionné, y compris leur rôle (serveur/agent) et leur état actuel (en cours d'exécution/arrêté).
+
+## Ajouter un Nœud Agent
+
+Cliquez sur **Ajouter un Nœud** pour rattacher un nouveau nœud agent (worker) au cluster sélectionné.
+Le nouveau nœud rejoint immédiatement le cluster et est visible via `kubectl get nodes`.
+
+## Actions sur les Nœuds
+
+| Action | Description |
+|--------|-------------|
+| **Démarrer** | Démarrer un nœud arrêté |
+| **Arrêter** | Arrêter un nœud en cours d'exécution |
+| **Supprimer** | Supprimer un nœud agent du cluster |
+
+<Aside type="caution">
+Les nœuds serveur (control-plane) ne peuvent pas être supprimés individuellement. Pour supprimer un nœud serveur, supprimez l'ensemble du cluster.
+</Aside>
+
+## Rôles des Nœuds
+
+- **server** — nœud control-plane k3s. Exécute l'API server, le scheduler et le controller manager.
+- **agent** — nœud worker k3s. Exécute les workloads (pods). Vous pouvez les ajouter et les supprimer librement.
+
+## Mise à l'échelle des Workloads
+
+Ajouter des nœuds augmente la capacité du cluster à planifier des pods. Utile pour tester les règles d'affinité, DaemonSets ou les limites de ressources.

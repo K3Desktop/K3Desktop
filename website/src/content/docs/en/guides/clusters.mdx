@@ -1,0 +1,51 @@
+---
+title: Cluster Management
+description: Create, start, stop, and delete k3d clusters with K3Desktop.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+The **Clusters** page is the home screen of K3Desktop. It lists all k3d clusters on your machine
+and lets you create new ones or manage existing ones.
+
+## Creating a Cluster
+
+Click **New Cluster** to open the creation dialog. Two modes are available:
+
+### Simple Mode
+
+Fill in:
+- **Name** — unique cluster identifier (lowercase, no spaces)
+- **Servers** — number of control-plane nodes (default: 1)
+- **Agents** — number of worker nodes (default: 0)
+- **k3s Image** — Kubernetes version (leave blank for latest)
+- **API Port** — host port mapped to the k3s API server (leave blank for auto-assign)
+
+### Advanced Mode
+
+Full YAML configuration editor with syntax highlighting, linting, and auto-indent.
+Uses the [k3d config file format](https://k3d.io/stable/usage/configfile/).
+
+<Aside type="tip">
+Advanced mode is useful for reproducible cluster setups — save your YAML config to version control.
+</Aside>
+
+## Cluster Creation Progress
+
+Cluster creation runs asynchronously. A progress indicator appears while k3d provisions
+the cluster. If creation fails, K3Desktop automatically rolls back any partially created resources.
+
+## Cluster Actions
+
+| Action | Description |
+|--------|-------------|
+| **Start** | Start a stopped cluster |
+| **Stop** | Stop a running cluster (preserves data) |
+| **Delete** | Permanently delete the cluster and all its nodes |
+| **Export Kubeconfig** | Merge cluster credentials into `~/.kube/config` |
+
+<Aside type="caution">
+Deleting a cluster removes all workloads and persistent data inside it. This cannot be undone.
+</Aside>

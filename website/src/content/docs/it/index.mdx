@@ -1,0 +1,47 @@
+---
+title: K3Desktop
+description: Interfaccia desktop per gestire cluster Kubernetes k3d — senza CLI.
+template: splash
+hero:
+  tagline: Kubernetes locale, senza CLI
+  image:
+    file: ../../../../public/favicon.svg
+  actions:
+    - text: Installa
+      link: /k3desktop/it/getting-started/install/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/k3desktop/k3desktop
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+K3Desktop è un'applicazione desktop cross-platform per gestire cluster [k3d](https://k3d.io) Kubernetes.
+Crea, avvia, ferma ed elimina cluster con pochi click — senza bisogno di terminale.
+
+## Funzionalità
+
+<CardGrid>
+  <Card title="Gestione Cluster" icon="rocket">
+    Crea cluster semplici o avanzati multi-nodo. Avvia, ferma ed elimina con un click.
+    Feedback in tempo reale durante la creazione.
+  </Card>
+  <Card title="Gestione Nodi" icon="laptop">
+    Aggiungi nodi agent ai cluster attivi. Avvia, ferma e rimuovi singoli nodi.
+  </Card>
+  <Card title="Registry Locali" icon="puzzle">
+    Crea registry container k3d locali per flussi push/pull veloci, senza rate limit.
+  </Card>
+  <Card title="Kubeconfig" icon="setting">
+    Esporta kubeconfig in `~/.kube/config`. Gestisci context senza modificare YAML a mano.
+  </Card>
+  <Card title="Blueprint" icon="list-format">
+    Definisci template di deployment Helm riutilizzabili e distribuisci stack completi in pochi secondi.
+  </Card>
+  <Card title="Dark Mode" icon="moon">
+    UI tematizzata dark/light con palette lime e cyan. Preferenza persistente tra sessioni.
+  </Card>
+</CardGrid>

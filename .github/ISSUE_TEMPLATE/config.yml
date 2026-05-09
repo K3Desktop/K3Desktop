@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://k3desktop.github.io/k3desktop/en/
+    about: Read the docs before opening an issue
+  - name: Security vulnerability
+    url: https://github.com/k3desktop/k3desktop/security/advisories/new
+    about: Report security issues privately

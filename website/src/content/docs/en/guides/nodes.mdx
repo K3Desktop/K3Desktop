@@ -1,0 +1,39 @@
+---
+title: Node Management
+description: Add, start, stop, and remove nodes in k3d clusters.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+The **Nodes** page shows all nodes in the selected cluster, including their role (server/agent)
+and current status (running/stopped).
+
+## Adding an Agent Node
+
+Click **Add Node** to attach a new agent (worker) node to the selected cluster.
+The new node joins the cluster immediately and is visible in `kubectl get nodes`.
+
+## Node Actions
+
+| Action | Description |
+|--------|-------------|
+| **Start** | Start a stopped node |
+| **Stop** | Stop a running node |
+| **Delete** | Remove an agent node from the cluster |
+
+<Aside type="caution">
+Server (control-plane) nodes cannot be deleted individually. To remove a server node,
+delete the entire cluster.
+</Aside>
+
+## Node Roles
+
+- **server** — k3s control-plane node. Runs the API server, scheduler, and controller manager.
+- **agent** — k3s worker node. Runs workloads (pods). You can add and remove these freely.
+
+## Scaling Workloads
+
+Adding nodes increases cluster capacity for scheduling pods. This is useful when testing
+node affinity rules, DaemonSets, or resource limits.

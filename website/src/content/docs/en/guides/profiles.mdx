@@ -1,0 +1,74 @@
+---
+title: Profiles
+description: Save and reuse cluster configuration profiles in K3Desktop.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+**Profiles** are saved k3d cluster configurations stored as YAML files at
+`~/.config/k3desktop/profiles/`. A profile captures a full cluster spec — node counts,
+port mappings, volumes, environment variables, k3s args, registry setup, and more —
+so you can recreate identical clusters with one click.
+
+## Creating a Profile
+
+Open **New Cluster → Advanced** mode. Configure your cluster, then click **Save as Profile**
+and give it a name. The current editor YAML is saved to `~/.config/k3desktop/profiles/<name>.yaml`.
+
+You can also create or edit profiles directly from the **Profiles** page.
+
+## Loading a Profile
+
+From **New Cluster → Advanced** mode, click **Load Profile** and select a saved profile.
+The editor populates with the profile's YAML, which you can further edit before creating.
+
+## Importing a Profile
+
+Click **Import** on the Profiles page. A file picker opens — select any valid k3d v1alpha5
+YAML file from your filesystem. K3Desktop validates the YAML and copies it into the profiles
+directory. If a profile with the same name already exists, the imported file is saved with a
+`-imported` suffix.
+
+<Aside type="tip">
+Profiles are plain YAML files. You can version-control them, share them with teammates,
+or write them by hand using the [k3d config file reference](https://k3d.io/stable/usage/configfile/).
+</Aside>
+
+## Profile YAML Format
+
+Profiles use the [k3d `Simple` config format](https://k3d.io/stable/usage/configfile/) (v1alpha5):
+
+```yaml
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: my-cluster
+servers: 1
+agents: 2
+image: rancher/k3s:v1.29.0-k3s1
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+volumes:
+  - volume: /tmp/data:/data
+    nodeFilters:
+      - all
+options:
+  k3d:
+    wait: true
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true
+```
+
+## Managing Profiles
+
+| Action | Description |
+|--------|-------------|
+| **Save** | Persist edits to `~/.config/k3desktop/profiles/<name>.yaml` |
+| **Delete** | Remove the profile file |
+| **Import** | Copy an external YAML file into the profiles directory |
+| **Load** | Populate the cluster creation editor with the profile's config |

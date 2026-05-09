@@ -1,0 +1,53 @@
+---
+title: Profils
+description: Sauvegarder et réutiliser des profils de configuration de cluster dans K3Desktop.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Vue d'ensemble
+
+Les **Profils** sont des configurations de cluster k3d sauvegardées sous forme de fichiers YAML dans
+`~/.config/k3desktop/profiles/`. Un profil capture une spécification complète de cluster — nombre de nœuds,
+mappages de ports, volumes, variables d'environnement, arguments k3s, configuration de registre, etc. — pour pouvoir recréer des clusters identiques en un clic.
+
+## Création d'un Profil
+
+Ouvrez **Nouveau Cluster → Avancé**. Configurez votre cluster, puis cliquez sur **Enregistrer comme Profil** et donnez-lui un nom. L'éditeur YAML actuel est sauvegardé dans `~/.config/k3desktop/profiles/<nom>.yaml`.
+
+Vous pouvez aussi créer ou modifier des profils directement depuis la page **Profils**.
+
+## Chargement d'un Profil
+
+Depuis **Nouveau Cluster → Avancé**, cliquez sur **Charger Profil** et sélectionnez un profil sauvegardé. L'éditeur se remplit avec le YAML du profil, que vous pouvez modifier avant la création.
+
+## Importation d'un Profil
+
+Cliquez sur **Importer** dans la page Profils. Un sélecteur de fichiers s'ouvre — sélectionnez n'importe quel fichier YAML k3d v1alpha5 valide depuis votre système. K3Desktop valide le YAML et le copie dans le dossier des profils. Si un profil du même nom existe déjà, le fichier importé est sauvegardé avec le suffixe `-imported`.
+
+<Aside type="tip">
+Les profils sont de simples fichiers YAML. Vous pouvez les versionner, les partager avec votre équipe ou les écrire à la main en utilisant la [référence de fichier de configuration k3d](https://k3d.io/stable/usage/configfile/).
+</Aside>
+
+## Format YAML du Profil
+
+Les profils utilisent le [format config `Simple` de k3d](https://k3d.io/stable/usage/configfile/) (v1alpha5) :
+
+```yaml
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: my-cluster
+servers: 1
+agents: 2
+image: rancher/k3s:v1.29.0-k3s1
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+volumes:
+  - volume: /tmp/data:/data
+    nodeFilters:
+      - all
+options:
+  k3d:

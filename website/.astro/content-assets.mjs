@@ -1,0 +1,8 @@
+
+import __ASTRO_IMAGE_IMPORT_ZInoWN from "../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fde%2Findex.mdx";
+import __ASTRO_IMAGE_IMPORT_CzIiz from "../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fen%2Findex.mdx";
+import __ASTRO_IMAGE_IMPORT_Z16mqAe from "../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fes%2Findex.mdx";
+import __ASTRO_IMAGE_IMPORT_Z1lG7lb from "../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Ffr%2Findex.mdx";
+import __ASTRO_IMAGE_IMPORT_1ezNj6 from "../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fit%2Findex.mdx";
+export default new Map([["../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fde%2Findex.mdx", __ASTRO_IMAGE_IMPORT_ZInoWN], ["../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fen%2Findex.mdx", __ASTRO_IMAGE_IMPORT_CzIiz], ["../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fes%2Findex.mdx", __ASTRO_IMAGE_IMPORT_Z16mqAe], ["../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Ffr%2Findex.mdx", __ASTRO_IMAGE_IMPORT_Z1lG7lb], ["../../../../public/favicon.svg?astroContentImageFlag=&importer=src%2Fcontent%2Fdocs%2Fit%2Findex.mdx", __ASTRO_IMAGE_IMPORT_1ezNj6]]);
+		

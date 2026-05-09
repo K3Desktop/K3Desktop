@@ -1,0 +1,15 @@
+{
+	"fixed": {
+		"file_version": "0.0.1"
+	},
+	"info": {
+		"0000": {
+			"ProductVersion": "0.0.1",
+			"CompanyName": "K3Desktop",
+			"FileDescription": "A k3d desktop application",
+			"LegalCopyright": "(c) 2026, K3Desktop",
+			"ProductName": "K3Desktop",
+			"Comments": "A k3d desktop application"
+		}
+	}
+}

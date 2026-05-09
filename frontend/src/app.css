@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+button {
+  margin:0px;
+  padding:0px 8px;
+  width:auto;
+}
+
+/* Custom select — remove native arrow, inject chevron */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 8l5 5 5-5' stroke='%23545454' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1.1em 1.1em;
+  padding-right: 2rem !important;
+}
+
+.dark select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M5 8l5 5 5-5' stroke='%239a9a9a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* Option popup background (best-effort — some browsers ignore this) */
+select option {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+.dark select option {
+  background-color: #242424;
+  color: #f7f7f7;
+}
+
+@theme {
+  /* k3d lime — primary action color (use with dark text) */
+  --color-brand:     #CDF700;
+  --color-brand-dim: #b8e000;
+
+  /* k3d cyan — accent: focus rings, links, active text */
+  --color-accent:     #0DCEFF;
+  --color-accent-dim: #0ab8e6;
+
+  /* Neutral grays — no blue tint; dark-mode base matches k3d #1A1A1A */
+  --color-gray-50:  #f7f7f7;
+  --color-gray-100: #efefef;
+  --color-gray-200: #dcdcdc;
+  --color-gray-300: #c4c4c4;
+  --color-gray-400: #9a9a9a;
+  --color-gray-500: #737373;
+  --color-gray-600: #545454;
+  --color-gray-700: #3a3a3a;
+  --color-gray-750: #2e2e2e;
+  --color-gray-800: #242424;
+  --color-gray-900: #1a1a1a;
+  --color-gray-950: #111111;
+}

@@ -1,0 +1,39 @@
+/* K3Desktop brand theme — mirrors app palette */
+
+:root {
+  /* Lime brand (#CDF700) mapped to Starlight accent scale */
+  --sl-color-accent-high: #CDF700;
+  --sl-color-accent: #9db300;
+  --sl-color-accent-low: #3d4700;
+
+  /* Cyan accent for links and text highlights */
+  --sl-color-text-accent: #0DCEFF;
+}
+
+:root[data-theme='dark'] {
+  --sl-color-bg: #1a1a1a;
+  --sl-color-bg-nav: #111111;
+  --sl-color-bg-sidebar: #141414;
+  --sl-color-hairline: #2a2a2a;
+  --sl-color-hairline-light: #222222;
+  --sl-color-text: #e5e5e5;
+  --sl-color-text-invert: #1a1a1a;
+
+  /* Lime accent in dark mode */
+  --sl-color-accent-high: #CDF700;
+  --sl-color-accent: #b8df00;
+  --sl-color-accent-low: #4a5700;
+  --sl-color-text-accent: #0DCEFF;
+}
+
+/* Use brand lime for the accent button style (CTA buttons) */
+.sl-link-button.primary {
+  background-color: #CDF700;
+  color: #1a1a1a;
+  border-color: #CDF700;
+}
+
+.sl-link-button.primary:hover {
+  background-color: #b8df00;
+  border-color: #b8df00;
+}

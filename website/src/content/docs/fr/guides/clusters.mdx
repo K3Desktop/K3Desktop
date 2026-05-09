@@ -1,0 +1,49 @@
+---
+title: Gestion des Clusters
+description: Créer, démarrer, arrêter et supprimer des clusters k3d avec K3Desktop.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Vue d'ensemble
+
+La page **Clusters** est l'écran d'accueil de K3Desktop. Elle liste tous les clusters k3d sur votre machine et vous permet d'en créer de nouveaux ou de gérer ceux existants.
+
+## Création d'un Cluster
+
+Cliquez sur **Nouveau Cluster** pour ouvrir la boîte de dialogue de création. Deux modes sont disponibles :
+
+### Mode Simple
+
+Remplissez :
+- **Nom** — identifiant unique du cluster (minuscules, sans espaces)
+- **Serveurs** — nombre de nœuds control-plane (par défaut : 1)
+- **Agents** — nombre de nœuds worker (par défaut : 0)
+- **Image k3s** — version de Kubernetes (laisser vide pour la dernière)
+- **Port API** — port hôte mappé sur le serveur API k3s (laisser vide pour attribution automatique)
+
+### Mode Avancé
+
+Éditeur YAML complet avec coloration syntaxique, linting et auto-indentation.
+Utilise le [format de fichier de configuration k3d](https://k3d.io/stable/usage/configfile/).
+
+<Aside type="tip">
+Le mode avancé est utile pour des configurations reproductibles — sauvegardez votre YAML sous contrôle de version.
+</Aside>
+
+## Progression de la Création du Cluster
+
+La création du cluster est asynchrone. Un indicateur de progression apparaît pendant que k3d provisionne le cluster. Si la création échoue, K3Desktop annule automatiquement toutes les ressources partiellement créées.
+
+## Actions sur le Cluster
+
+| Action | Description |
+|--------|-------------|
+| **Démarrer** | Démarrer un cluster arrêté |
+| **Arrêter** | Arrêter un cluster en cours d'exécution (les données sont conservées) |
+| **Supprimer** | Supprimer définitivement le cluster et tous ses nœuds |
+| **Exporter Kubeconfig** | Fusionner les identifiants du cluster dans `~/.kube/config` |
+
+<Aside type="caution">
+Supprimer un cluster efface tous les workloads et données persistantes à l'intérieur. Cette opération est irréversible.
+</Aside>

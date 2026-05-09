@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=k3desktop
+Exec=k3desktop
+Icon=k3desktop
+Categories=Development;
+Terminal=false
+Keywords=wails
+Version=1.0
+StartupNotify=false

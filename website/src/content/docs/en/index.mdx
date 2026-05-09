@@ -1,0 +1,56 @@
+---
+title: K3Desktop
+description: Desktop GUI for managing k3d Kubernetes clusters — no CLI required.
+template: splash
+hero:
+  tagline: Local Kubernetes, No CLI Required
+  image:
+    file: ../../../../public/favicon.svg
+  actions:
+    - text: Install
+      link: /k3desktop/en/getting-started/install/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/k3desktop/k3desktop
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+K3Desktop is a cross-platform desktop application for managing [k3d](https://k3d.io) Kubernetes clusters.
+Create, start, stop, and delete clusters with a few clicks — no `kubectl` or terminal knowledge required.
+
+## Features
+
+<CardGrid>
+  <Card title="Cluster Management" icon="rocket">
+    Create simple or advanced multi-node clusters. Start, stop, and delete with one click.
+    Real-time progress feedback during cluster creation.
+  </Card>
+  <Card title="Node Management" icon="laptop">
+    Add agent nodes to running clusters. Start, stop, and remove individual nodes without
+    touching the whole cluster.
+  </Card>
+  <Card title="Local Registries" icon="puzzle">
+    Spin up local k3d container registries for fast image push/pull workflows.
+    No Docker Hub rate limits.
+  </Card>
+  <Card title="Kubeconfig" icon="setting">
+    Export kubeconfigs directly to `~/.kube/config`. Manage contexts — set active, delete —
+    without editing YAML by hand.
+  </Card>
+  <Card title="Blueprints" icon="list-format">
+    Define reusable Helm deployment templates (blueprints) and deploy entire application stacks
+    to any cluster in seconds.
+  </Card>
+  <Card title="Profiles" icon="document">
+    Save cluster configurations as YAML profiles and recreate identical clusters instantly.
+    Import and share profiles across teams.
+  </Card>
+  <Card title="Dark Mode" icon="moon">
+    Fully themed dark/light UI with a distinctive lime and cyan palette.
+    Preference persisted across sessions.
+  </Card>
+</CardGrid>

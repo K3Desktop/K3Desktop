@@ -1,0 +1,174 @@
+k3desktop
+Copyright (c) 2026 Marco Santini
+Licensed under the MIT License (see LICENSE).
+
+This software includes third-party open source components listed below.
+
+-------------------------------------------------------------------------------
+APACHE LICENSE 2.0 COMPONENTS
+-------------------------------------------------------------------------------
+
+The following components are distributed under the Apache License, Version 2.0
+(https://www.apache.org/licenses/LICENSE-2.0):
+
+  helm.sh/helm/v3
+  Copyright The Helm Authors
+  https://github.com/helm/helm
+
+  k8s.io/client-go
+  k8s.io/apimachinery
+  k8s.io/apiserver
+  k8s.io/apiextensions-apiserver
+  k8s.io/cli-runtime
+  k8s.io/component-base
+  k8s.io/kubectl
+  k8s.io/klog/v2
+  k8s.io/utils
+  Copyright The Kubernetes Authors
+  https://github.com/kubernetes
+
+  sigs.k8s.io/yaml
+  sigs.k8s.io/json
+  sigs.k8s.io/kustomize/api
+  sigs.k8s.io/kustomize/kyaml
+  sigs.k8s.io/structured-merge-diff/v4
+  Copyright The Kubernetes Authors
+  https://github.com/kubernetes-sigs
+
+  github.com/google/go-containerregistry
+  Copyright Google LLC
+  https://github.com/google/go-containerregistry
+
+  github.com/docker/docker
+  github.com/docker/cli
+  github.com/docker/distribution
+  github.com/docker/go-connections
+  github.com/docker/go-metrics
+  github.com/docker/go-units
+  github.com/docker/docker-credential-helpers
+  Copyright Docker, Inc.
+  https://github.com/docker
+  https://github.com/moby/moby
+
+  github.com/containerd/containerd
+  github.com/containerd/log
+  github.com/containerd/stargz-snapshotter/estargz
+  github.com/containerd/errdefs
+  github.com/containerd/platforms
+  Copyright The containerd Authors
+  https://github.com/containerd
+
+  github.com/moby/term
+  github.com/moby/docker-image-spec
+  github.com/moby/patternmatcher
+  github.com/moby/sys/sequential
+  github.com/moby/sys/user
+  Copyright Moby Authors
+  https://github.com/moby
+
+  github.com/rancher/wharfie
+  Copyright Rancher Labs, Inc.
+  https://github.com/rancher/wharfie
+
+  github.com/theupdateframework/notary
+  Copyright Docker, Inc.
+  https://github.com/theupdateframework/notary
+
+  github.com/opencontainers/go-digest
+  github.com/opencontainers/image-spec
+  Copyright The Linux Foundation
+  https://github.com/opencontainers
+
+  go.opentelemetry.io (instrumentation and exporters)
+  Copyright The OpenTelemetry Authors
+  https://github.com/open-telemetry
+
+  google.golang.org/grpc
+  google.golang.org/protobuf
+  google.golang.org/genproto
+  Copyright Google LLC
+  https://github.com/grpc/grpc-go
+
+  github.com/grpc-ecosystem/grpc-gateway/v2
+  Copyright 2015, gRPC-Gateway Authors
+  https://github.com/grpc-ecosystem/grpc-gateway
+
+  github.com/Azure/go-ansiterm
+  Copyright Microsoft Corporation
+  https://github.com/Azure/go-ansiterm
+
+  github.com/spf13/cobra
+  github.com/spf13/pflag
+  Copyright The Cobra Authors
+  https://github.com/spf13/cobra
+
+  oras.land/oras-go/v2
+  Copyright The ORAS Authors
+  https://github.com/oras-project/oras-go
+
+  @wailsio/runtime (JavaScript)
+  Copyright Wails Contributors
+  https://github.com/wailsapp/wails
+
+-------------------------------------------------------------------------------
+MIT LICENSE COMPONENTS
+-------------------------------------------------------------------------------
+
+The following components are distributed under the MIT License:
+
+  github.com/k3d-io/k3d/v5             https://github.com/k3d-io/k3d
+  github.com/wailsapp/wails/v3         https://github.com/wailsapp/wails
+  github.com/sirupsen/logrus           https://github.com/sirupsen/logrus
+  github.com/lmittmann/tint            https://github.com/lmittmann/tint
+  github.com/coder/websocket           https://github.com/coder/websocket
+  github.com/adrg/xdg                  https://github.com/adrg/xdg
+  github.com/bep/debounce              https://github.com/bep/debounce
+  github.com/google/uuid               https://github.com/google/uuid
+  github.com/mitchellh/mapstructure    https://github.com/mitchellh/mapstructure
+  github.com/mitchellh/copystructure   https://github.com/mitchellh/copystructure
+  github.com/go-logr/logr              https://github.com/go-logr/logr
+  svelte                               https://github.com/sveltejs/svelte
+  @sveltejs/vite-plugin-svelte         https://github.com/sveltejs/vite-plugin-svelte
+  vite                                 https://github.com/vitejs/vite
+  @codemirror/state                    https://github.com/codemirror/dev
+  @codemirror/view                     https://github.com/codemirror/dev
+  @codemirror/lang-yaml                https://github.com/codemirror/dev
+  @codemirror/theme-one-dark           https://github.com/codemirror/dev
+  tailwindcss                          https://github.com/tailwindlabs/tailwindcss
+  js-yaml                              https://github.com/nodeca/js-yaml
+
+-------------------------------------------------------------------------------
+BSD LICENSE COMPONENTS
+-------------------------------------------------------------------------------
+
+  tslib (0BSD / BSD Zero Clause License)
+  Copyright Microsoft Corporation
+  https://github.com/microsoft/tslib
+
+  github.com/davecgh/go-spew (ISC)
+  Copyright (c) 2012-2016 Dave Collins
+  https://github.com/davecgh/go-spew
+
+  github.com/gogo/protobuf (BSD-3-Clause)
+  Copyright (c) 2013, The GoGo Authors
+  https://github.com/gogo/protobuf
+
+  golang.org/x/crypto
+  golang.org/x/net
+  golang.org/x/sys
+  golang.org/x/text
+  golang.org/x/term
+  golang.org/x/sync
+  golang.org/x/oauth2
+  golang.org/x/exp
+  Copyright The Go Authors
+  https://cs.opensource.google/go
+  (BSD 3-Clause)
+
+-------------------------------------------------------------------------------
+
+A full copy of the Apache License 2.0 is available at:
+https://www.apache.org/licenses/LICENSE-2.0
+
+Go module dependency versions are recorded in go.mod and go.sum.
+JavaScript dependency versions are recorded in frontend/package.json and frontend/package-lock.json.

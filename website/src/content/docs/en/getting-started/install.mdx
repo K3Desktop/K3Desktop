@@ -1,0 +1,55 @@
+---
+title: Installation
+description: How to install K3Desktop on macOS, Linux, and Windows.
+sidebar:
+  label: Install
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+## Prerequisites
+
+K3Desktop only requires **Docker** to be installed and running. There is no k3d CLI, Helm CLI,
+or kubectl dependency — all cluster operations run via embedded Go packages.
+
+- **Docker Desktop** (macOS/Windows) or **Docker Engine** (Linux) — [docker.com](https://www.docker.com/get-started)
+
+Make sure the Docker daemon is running before launching K3Desktop.
+
+## Download
+
+<Tabs>
+  <TabItem label="macOS">
+
+Download the latest `.zip` from the [Releases page](https://github.com/k3desktop/k3desktop/releases).
+
+1. Unzip the archive
+2. Drag **K3Desktop.app** to `/Applications`
+3. On first launch, right-click → **Open** to bypass Gatekeeper (unsigned app)
+
+  </TabItem>
+  <TabItem label="Linux">
+
+Download the binary for your architecture from the [Releases page](https://github.com/k3desktop/k3desktop/releases).
+
+```bash
+chmod +x k3desktop-linux-amd64
+./k3desktop-linux-amd64
+```
+
+  </TabItem>
+  <TabItem label="Windows">
+
+<Aside type="caution">Windows support is planned for a future release.</Aside>
+
+  </TabItem>
+</Tabs>
+
+## First Launch
+
+1. Open K3Desktop
+2. The **Clusters** page opens — empty on first run
+3. Click **New Cluster** to create your first cluster
+4. Once ready, click **Export Kubeconfig** to add it to `~/.kube/config`
+
+Your cluster is ready. Use `kubectl`, `k9s`, or any Kubernetes tool as normal.

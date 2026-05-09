@@ -1,0 +1,53 @@
+---
+title: Profili
+description: Salva e riutilizza profili di configurazione cluster in K3Desktop.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Panoramica
+
+I **Profili** sono configurazioni di cluster k3d salvate come file YAML in
+`~/.config/k3desktop/profiles/`. Un profilo cattura una specifica cluster completa — numero nodi,
+mapping porte, volumi, variabili ambiente, argomenti k3s, setup registry e altro — così puoi ricreare cluster identici con un click.
+
+## Creazione di un Profilo
+
+Apri **Nuovo Cluster → Avanzato**. Configura il cluster, poi clicca **Salva come Profilo** e dai un nome. L'editor YAML corrente viene salvato in `~/.config/k3desktop/profiles/<nome>.yaml`.
+
+Puoi anche creare o modificare profili direttamente dalla pagina **Profili**.
+
+## Caricamento di un Profilo
+
+Da **Nuovo Cluster → Avanzato**, clicca **Carica Profilo** e seleziona un profilo salvato. L'editor si popola con lo YAML del profilo, che puoi modificare prima della creazione.
+
+## Importazione di un Profilo
+
+Clicca **Importa** nella pagina Profili. Si apre un selettore file — scegli un qualsiasi file YAML k3d v1alpha5 valido dal filesystem. K3Desktop valida lo YAML e lo copia nella directory dei profili. Se esiste già un profilo con lo stesso nome, il file importato viene salvato con suffisso `-imported`.
+
+<Aside type="tip">
+I profili sono semplici file YAML. Puoi versionarli, condividerli con il team o scriverli a mano usando la [reference file di configurazione k3d](https://k3d.io/stable/usage/configfile/).
+</Aside>
+
+## Formato YAML del Profilo
+
+I profili usano il [formato config `Simple` di k3d](https://k3d.io/stable/usage/configfile/) (v1alpha5):
+
+```yaml
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+	name: my-cluster
+servers: 1
+agents: 2
+image: rancher/k3s:v1.29.0-k3s1
+ports:
+	- port: 8080:80
+		nodeFilters:
+			- loadbalancer
+volumes:
+	- volume: /tmp/data:/data
+		nodeFilters:
+			- all
+options:
+	k3d:

@@ -1,0 +1,53 @@
+---
+title: Local Registries
+description: Create and manage local k3d container registries.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+K3Desktop lets you create local k3d container registries — private Docker-compatible registries
+that run entirely on your machine. No Docker Hub rate limits, no credentials needed.
+
+## Creating a Registry
+
+Click **New Registry** and fill in:
+
+- **Name** — registry identifier (becomes the hostname `k3d-<name>`)
+- **Port** — host port for the registry (leave blank to auto-assign a random port)
+
+After creation the registry is accessible at `localhost:<port>` from your host machine.
+
+## Using a Registry with a Cluster
+
+To let a cluster pull images from your local registry, the registry must be on the same
+k3d network as the cluster. Wire this up by referencing the registry in your cluster config:
+
+```yaml
+# k3d cluster config
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+registries:
+  use:
+    - k3d-myregistry:5000
+```
+
+## Pushing Images
+
+```bash
+# Tag and push to local registry
+docker tag myapp:latest k3d-myregistry:5000/myapp:latest
+docker push k3d-myregistry:5000/myapp:latest
+```
+
+Your cluster can now pull `k3d-myregistry:5000/myapp:latest` directly.
+
+## Deleting a Registry
+
+Click **Delete** on the registry row. K3Desktop disconnects the registry from all cluster
+networks before deletion to avoid dangling endpoint errors.
+
+<Aside type="tip">
+Registries are persistent — they survive cluster restarts and can be shared across multiple clusters.
+</Aside>

@@ -1,0 +1,61 @@
+---
+title: Blueprints
+description: Définir et déployer des stacks d'applications Helm réutilisables avec les Blueprints K3Desktop.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Vue d'ensemble
+
+Les **Blueprints** sont des modèles de déploiement Helm réutilisables stockés localement dans
+`~/.config/k3desktop/blueprints/`. Un blueprint définit un ou plusieurs charts Helm à installer ensemble, formant ainsi une stack applicative complète.
+
+## Création d'un Blueprint
+
+Cliquez sur **Nouveau Blueprint** et remplissez :
+
+- **Nom** — identifiant du blueprint (devient le fichier `<nom>.yaml`)
+- **Charts** — un ou plusieurs charts Helm avec leur configuration
+
+Chaque entrée de chart comprend :
+- **Chart** — référence du chart Helm (ex : `stable/nginx-ingress`, référence OCI ou chemin local)
+- **Nom de la release** — nom de la release Helm dans le cluster cible
+- **Namespace** — namespace Kubernetes (créé s'il n'existe pas)
+- **Valeurs** — valeurs YAML en ligne (équivalent à `-f values.yaml`)
+
+Exemple de blueprint YAML :
+
+```yaml
+name: monitoring-stack
+charts:
+  - chart: prometheus-community/kube-prometheus-stack
+    release: prometheus
+    namespace: monitoring
+    values: |
+      grafana:
+        enabled: true
+        adminPassword: admin
+  - chart: prometheus-community/prometheus-adapter
+    release: prometheus-adapter
+    namespace: monitoring
+```
+
+## Déploiement d'un Blueprint
+
+1. Ouvrez le blueprint
+2. Cliquez sur **Déployer**
+3. Sélectionnez le cluster cible
+4. K3Desktop exécute Helm upgrade-or-install pour chaque chart dans l'ordre
+
+Le déploiement est asynchrone. La progression et les erreurs apparaissent dans le panneau de log.
+
+<Aside type="tip">
+Les blueprints utilisent la logique upgrade-or-install : si la release existe déjà elle est mise à jour,
+sinon elle est installée avec création du namespace activée.
+</Aside>
+
+## Gestion des Blueprints
+
+| Action | Description |
+title: "Blueprints"
+---

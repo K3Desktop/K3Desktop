@@ -1,0 +1,47 @@
+---
+title: K3Desktop
+description: Desktop-Anwendung zur Verwaltung von k3d-Kubernetes-Clustern — ohne CLI.
+template: splash
+hero:
+  tagline: Lokales Kubernetes, ohne CLI
+  image:
+    file: ../../../../public/favicon.svg
+  actions:
+    - text: Installieren
+      link: /k3desktop/de/getting-started/install/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/k3desktop/k3desktop
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+K3Desktop ist eine plattformübergreifende Desktop-Anwendung zur Verwaltung von [k3d](https://k3d.io)-Kubernetes-Clustern.
+Erstellen, starten, stoppen und löschen Sie Cluster mit wenigen Klicks — kein Terminal erforderlich.
+
+## Funktionen
+
+<CardGrid>
+  <Card title="Cluster-Verwaltung" icon="rocket">
+    Erstellen Sie einfache oder erweiterte Multi-Node-Cluster. Starten, stoppen und löschen mit einem Klick.
+    Echtzeit-Feedback während der Cluster-Erstellung.
+  </Card>
+  <Card title="Node-Verwaltung" icon="laptop">
+    Fügen Sie Agent-Nodes zu laufenden Clustern hinzu. Starten, stoppen und entfernen Sie einzelne Nodes.
+  </Card>
+  <Card title="Lokale Registries" icon="puzzle">
+    Erstellen Sie lokale k3d-Container-Registries für schnelle Push/Pull-Workflows ohne Rate-Limits.
+  </Card>
+  <Card title="Kubeconfig" icon="setting">
+    Exportieren Sie Kubeconfigs nach `~/.kube/config`. Kontexte verwalten ohne YAML manuell zu bearbeiten.
+  </Card>
+  <Card title="Blueprints" icon="list-format">
+    Definieren Sie wiederverwendbare Helm-Deployment-Templates und deployen Sie komplette Stacks in Sekunden.
+  </Card>
+  <Card title="Dark Mode" icon="moon">
+    Vollständig gestaltete Dark/Light-Oberfläche mit Lime- und Cyan-Palette. Einstellung wird gespeichert.
+  </Card>
+</CardGrid>
