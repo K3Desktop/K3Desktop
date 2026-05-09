@@ -7,16 +7,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: deploy-website
+  cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,17 +29,20 @@ jobs:
       - name: Build site
         run: npm run build
         working-directory: website
-      - uses: actions/configure-pages@v4
-      - uses: actions/upload-pages-artifact@v3
+      - name: Generate token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
         with:
-          path: website/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: k3desktop.github.io
+      - name: Deploy to Documentation Repo
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ steps.generate_token.outputs.token }}
+          external_repository: K3Desktop/k3desktop.github.io
+          publish_branch: main
+          publish_dir: ./website/dist
+          force_orphan: true
+          commit_message: "deploy: documentation update from ${GITHUB_SHA::8}"
