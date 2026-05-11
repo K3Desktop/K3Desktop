@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { Events } from "@wailsio/runtime";
   import { BlueprintService, ClusterService } from "../../bindings/github.com/k3desktop/k3desktop/service";
   import { BlueprintDTO, BlueprintDeployRequest, ChartEntryDTO, ClusterDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
@@ -38,6 +38,7 @@
       blueprints = await BlueprintService.ListBlueprints() ?? [];
     } catch (e: any) {
       error = String(e);
+      blueprints = [];
     } finally {
       loading = false;
     }
@@ -90,11 +91,14 @@
       });
       await BlueprintService.SaveBlueprint(bp);
       showForm = false;
-      await load();
     } catch (e: any) {
       error = String(e);
     } finally {
       saving = false;
+    }
+    if (!showForm) {
+      await tick();
+      load();
     }
   }
 
