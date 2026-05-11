@@ -5,9 +5,10 @@
 **Do not open a public GitHub issue for security vulnerabilities.**
 
 Report privately via [GitHub Security Advisories](https://github.com/k3desktop/k3desktop/security/advisories/new)
-or email `marco.santini@pm.me`.
+or email `santinimarco@tiscali.it`.
 
 Include:
+
 - Description of the vulnerability
 - Steps to reproduce
 - Potential impact
