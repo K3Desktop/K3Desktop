@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	k3dclient "github.com/k3d-io/k3d/v5/pkg/client"
 	k3d "github.com/k3d-io/k3d/v5/pkg/types"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
 	k3dversion "github.com/k3d-io/k3d/v5/version"
 	"github.com/k3desktop/k3desktop/dto"
 )
@@ -13,6 +15,8 @@ import (
 type NodeService struct{}
 
 func (s *NodeService) ListNodes(ctx context.Context, clusterName string) ([]dto.NodeDTO, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 	c, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: clusterName})
 	if err != nil {
 		return nil, err
@@ -91,4 +95,91 @@ func (s *NodeService) StopNode(ctx context.Context, nodeName string) error {
 		return err
 	}
 	return GetRuntime().StopNode(ctx, node)
+}
+
+func (s *NodeService) UpgradeNode(ctx context.Context, nodeName, image string) error {
+	defer WithTarget(nodeName)()
+	rt := GetRuntime()
+
+	oldNode, err := k3dclient.NodeGet(ctx, rt, &k3d.Node{Name: nodeName})
+	if err != nil {
+		return fmt.Errorf("node not found: %w", err)
+	}
+
+	cluster, err := k3dclient.ClusterGet(ctx, rt, &k3d.Cluster{Name: oldNode.RuntimeLabels[k3d.LabelClusterName]})
+	if err != nil {
+		return fmt.Errorf("cluster not found: %w", err)
+	}
+
+	// Rename the old node to free the original name for the replacement.
+	tempName := nodeName + "-upgrading"
+	if err := rt.RenameNode(ctx, oldNode, tempName); err != nil {
+		return fmt.Errorf("rename old node: %w", err)
+	}
+	oldNode.Name = tempName
+
+	// Re-fetch cluster after rename: cluster.Nodes still holds the pre-rename name,
+	// so NodeAddToCluster's NodeGet call would fail to find the source container.
+	cluster, err = k3dclient.ClusterGet(ctx, rt, &k3d.Cluster{Name: cluster.Name})
+	if err != nil {
+		_ = rt.RenameNode(ctx, oldNode, nodeName)
+		return fmt.Errorf("re-fetch cluster after rename: %w", err)
+	}
+
+	// k3s stores a per-node password hash as a Kubernetes secret
+	// (<nodename>.node-password.k3s in kube-system). A new container with the same
+	// hostname generates a fresh password that won't match the stored hash, causing
+	// the server to permanently reject registration. Delete the stale secret first.
+	if err := cleanStaleNodeState(ctx, rt, cluster, nodeName); err != nil {
+		_ = rt.RenameNode(ctx, oldNode, nodeName)
+		return fmt.Errorf("clean stale node state: %w", err)
+	}
+
+	// NodeAddToCluster performs the full node setup: it reads env vars (K3S_URL,
+	// K3S_TOKEN), registry config and network settings from existing cluster nodes,
+	// then creates and starts the new container and waits for the ready log message.
+	// CopyNode omits all of that, causing the node to start but never join the cluster.
+	newNode := &k3d.Node{
+		Name:  nodeName,
+		Role:  oldNode.Role,
+		Image: image,
+	}
+	if err := k3dclient.NodeAddToCluster(ctx, rt, newNode, cluster, k3d.NodeCreateOpts{Wait: true}); err != nil {
+		// rollback: restore old node name so the cluster stays functional
+		_ = rt.RenameNode(ctx, oldNode, nodeName)
+		return fmt.Errorf("create replacement node (rolled back): %w", err)
+	}
+
+	if err := rt.StopNode(ctx, oldNode); err != nil {
+		return fmt.Errorf("stop old node: %w", err)
+	}
+
+	return k3dclient.NodeDelete(ctx, rt, oldNode, k3d.NodeDeleteOpts{SkipLBUpdate: true})
+}
+
+// cleanStaleNodeState removes k8s objects that would block a replacement container
+// from joining cleanly:
+//  1. The node-password secret — new container generates a fresh password; stale hash
+//     causes permanent 403 from the server.
+//  2. The Node object itself — it carries stale flannel/CNI annotations (e.g.
+//     flannel.alpha.coreos.com/public-ip pointing to the old container's IP). flannel
+//     in the new container reads those stale annotations, tries to find an interface
+//     that doesn't exist, and crashes before kubelet can post status.
+func cleanStaleNodeState(ctx context.Context, rt runtimes.Runtime, cluster *k3d.Cluster, nodeName string) error {
+	var serverNode *k3d.Node
+	for _, n := range cluster.Nodes {
+		if n.Role == k3d.ServerRole {
+			serverNode = n
+			break
+		}
+	}
+	if serverNode == nil {
+		return fmt.Errorf("no server node found in cluster %s", cluster.Name)
+	}
+	secretName := nodeName + ".node-password.k3s"
+	cmd := []string{"sh", "-c", fmt.Sprintf(
+		"kubectl delete secret -n kube-system %s --ignore-not-found=true && kubectl delete node %s --ignore-not-found=true",
+		secretName, nodeName,
+	)}
+	return rt.ExecInNode(ctx, serverNode, cmd)
 }

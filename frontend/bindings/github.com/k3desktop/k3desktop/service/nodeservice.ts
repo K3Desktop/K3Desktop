@@ -31,6 +31,10 @@ export function StopNode(nodeName: string): $CancellablePromise<void> {
     return $Call.ByID(2625440930, nodeName);
 }
 
+export function UpgradeNode(nodeName: string, image: string): $CancellablePromise<void> {
+    return $Call.ByID(1505253066, nodeName, image);
+}
+
 // Private type creation functions
 const $$createType0 = dto$0.NodeDTO.createFrom;
 const $$createType1 = $Create.Array($$createType0);

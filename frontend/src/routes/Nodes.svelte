@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { ClusterService } from "../../bindings/github.com/k3desktop/k3desktop/service";
-  import { NodeService } from "../../bindings/github.com/k3desktop/k3desktop/service";
+  import { ClusterService, NodeService, VersionService } from "../../bindings/github.com/k3desktop/k3desktop/service";
   import { ClusterDTO, NodeDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
   import OpLog from "../lib/OpLog.svelte";
   import { clearOpLog } from "../lib/logStore";
@@ -15,6 +14,14 @@
   let busy: Record<string, boolean> = $state({});
   let visibleLogs: Record<string, boolean> = $state({}); // node names with log panel open
   let error = $state("");
+
+  // Upgrade modal state
+  let upgradeModalNode: NodeDTO | null = $state(null);
+  let upgradeImage = $state("");
+  let k3sVersions: string[] = $state([]);
+  let loadingVersions = $state(false);
+  let upgrading = $state(false);
+  let versionDropdownOpen = $state(false);
 
   async function loadClusters() {
     try {
@@ -89,6 +96,62 @@
     }
   }
 
+  async function openUpgradeModal(n: NodeDTO) {
+    upgradeModalNode = n;
+    upgradeImage = "";
+    k3sVersions = [];
+    loadingVersions = true;
+    try {
+      k3sVersions = await VersionService.ListK3sVersions(20);
+      if (k3sVersions.length > 0) upgradeImage = k3sVersions[0];
+    } catch (e: any) {
+      error = String(e);
+      upgradeModalNode = null;
+    } finally {
+      loadingVersions = false;
+    }
+  }
+
+  function closeUpgradeModal() {
+    upgradeModalNode = null;
+    upgradeImage = "";
+    versionDropdownOpen = false;
+  }
+
+  async function confirmUpgrade() {
+    if (!upgradeModalNode || !upgradeImage) return;
+    const node = upgradeModalNode;
+    const image = `rancher/k3s:${upgradeImage}`;
+    closeUpgradeModal();
+    busy[node.name] = true;
+    visibleLogs[node.name] = true;
+    upgrading = true;
+    clearOpLog(node.name);
+    try {
+      await NodeService.UpgradeNode(node.name, image);
+      // Reload in a fresh async tick so Docker has settled after the upgrade.
+      setTimeout(() => loadNodes(), 500);
+    } catch (e: any) {
+      error = String(e);
+    } finally {
+      delete busy[node.name];
+      upgrading = false;
+    }
+  }
+
+  // Returns human-readable image label: tag if available, else short SHA.
+  function displayImage(image: string): string {
+    // "rancher/k3s:v1.32.0-k3s1" → "v1.32.0-k3s1"
+    if (image.includes(':') && !image.startsWith('sha256:')) {
+      const tag = image.split(':').pop()!;
+      if (!/^[0-9a-f]{12,}$/.test(tag)) return tag;
+    }
+    // "sha256:abcdef..." or "repo@sha256:abcdef..."
+    const m = image.match(/sha256:([0-9a-f]+)/);
+    if (m) return `sha256:${m[1].slice(0, 12)}…`;
+    return image;
+  }
+
   onMount(loadClusters);
 </script>
 
@@ -158,7 +221,7 @@
                   </span>
                 {/if}
               </td>
-              <td class="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400 max-w-48 truncate">{n.image}</td>
+              <td class="px-4 py-3 font-mono text-xs text-gray-500 dark:text-gray-400 max-w-48 truncate" title={n.image}>{displayImage(n.image)}</td>
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2 justify-end">
                   <button
@@ -168,6 +231,15 @@
                   >
                     {n.state === "running" ? "Stop" : "Start"}
                   </button>
+                  {#if n.role === "agent"}
+                  <button
+                    onclick={() => openUpgradeModal(n)}
+                    disabled={isBusy}
+                    class="px-2.5 py-1 rounded text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Upgrade
+                  </button>
+                  {/if}
                   {#if n.role === "agent"}
                     <button
                       onclick={() => del(n.name)}
@@ -191,3 +263,65 @@
     </div>
   {/if}
 </div>
+
+<!-- Upgrade modal -->
+{#if upgradeModalNode}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">Upgrade node</h3>
+      <p class="text-sm text-gray-500 dark:text-gray-400 font-mono mb-4">{upgradeModalNode.name}</p>
+
+      <div class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+        Current: <span class="font-mono" title={upgradeModalNode.image}>{displayImage(upgradeModalNode.image)}</span>
+      </div>
+
+      <label for="upgrade-version-btn" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">New version</label>
+      {#if loadingVersions}
+        <div class="text-sm text-gray-400 dark:text-gray-500 py-2">Loading versions…</div>
+      {:else}
+        <div class="relative mb-4">
+          <button
+            id="upgrade-version-btn"
+            type="button"
+            onclick={() => versionDropdownOpen = !versionDropdownOpen}
+            class="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm text-left focus:outline-none focus:ring-2 focus:ring-accent flex items-center justify-between"
+          >
+            <span>{upgradeImage || "Select version"}</span>
+            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="none">
+              <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          {#if versionDropdownOpen}
+            <div class="absolute z-10 w-full mt-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 shadow-lg overflow-y-auto max-h-48">
+              {#each k3sVersions as v}
+                <button
+                  type="button"
+                  onclick={() => { upgradeImage = v; versionDropdownOpen = false; }}
+                  class="w-full text-left px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-600 {upgradeImage === v ? 'bg-gray-100 dark:bg-gray-600 font-medium' : ''}"
+                >
+                  {v}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
+
+      <div class="flex gap-3 justify-end">
+        <button
+          onclick={closeUpgradeModal}
+          class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onclick={confirmUpgrade}
+          disabled={!upgradeImage || loadingVersions}
+          class="px-4 py-2 rounded-lg bg-brand text-gray-900 text-sm font-semibold hover:bg-brand-dim disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          Upgrade
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}

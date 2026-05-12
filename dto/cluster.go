@@ -31,6 +31,12 @@ type NodeFilter struct {
 	NodeFilters string `json:"nodeFilters"` // single string, comma-separated filters
 }
 
+// NodeUpgradeRequest specifies a new image for an existing node.
+type NodeUpgradeRequest struct {
+	NodeName string `json:"nodeName"`
+	Image    string `json:"image"`
+}
+
 // ClusterCreateAdvancedRequest covers all configurable aspects of k3d cluster create.
 type ClusterCreateAdvancedRequest struct {
 	Name string `json:"name"`
