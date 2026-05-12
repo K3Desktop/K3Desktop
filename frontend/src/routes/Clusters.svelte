@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { Events } from "@wailsio/runtime";
-  import { ClusterService, VersionService } from "../../bindings/github.com/k3desktop/k3desktop/service";
-  import { ClusterCreateRequest, ClusterCreateAdvancedRequest, NodeFilter, UlimitDTO, FileDTO, HostAliasDTO, ClusterDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
+  import { ClusterService, VersionService, ProfileService } from "../../bindings/github.com/k3desktop/k3desktop/service";
+  import { ClusterCreateRequest, ClusterCreateAdvancedRequest, NodeFilter, UlimitDTO, FileDTO, HostAliasDTO, ClusterDTO, ProfileDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
   import ClusterForm from "../lib/ClusterForm.svelte";
   import OpLog from "../lib/OpLog.svelte";
-  import { clusterFormPrefill, defaultAdv, advToDto } from "../lib/prefill";
+  import { clusterFormPrefill, defaultAdv, advToDto, dtoToAdv } from "../lib/prefill";
   import { clearOpLog } from "../lib/logStore";
   import type { AdvState } from "../lib/prefill";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
@@ -22,6 +22,29 @@
 
   let k3sVersions: string[] = $state([]);
   let versionsLoading = $state(false);
+
+  let profiles: ProfileDTO[] = $state([]);
+  let profileDropdownOpen = $state(false);
+
+  async function loadProfiles() {
+    try {
+      profiles = await ProfileService.ListProfiles() ?? [];
+    } catch { /* non-fatal */ }
+  }
+
+  async function createFromProfile(p: ProfileDTO) {
+    profileDropdownOpen = false;
+    error = "";
+    try {
+      const yaml = await ProfileService.GetProfile(p.name);
+      const req = await ProfileService.YAMLToAdvancedRequest(yaml);
+      adv = dtoToAdv(req);
+      loadVersions();
+      showAdvanced = true;
+    } catch (e: any) {
+      error = String(e);
+    }
+  }
 
   async function loadVersions() {
     if (k3sVersions.length > 0) return;
@@ -124,6 +147,7 @@
 
   onMount(() => {
     load();
+    loadProfiles();
     Events.On("cluster:creating", () => { creating = true; });
     Events.On("cluster:ready", () => { creating = false; silentLoad(); });
     Events.On("cluster:error", (ev: any) => { creating = false; error = ev.data; });
@@ -144,12 +168,40 @@
 <div class="p-6">
   <div class="flex items-center justify-between mb-6">
     <h4 class="text-2xl font-semibold text-gray-900 dark:text-gray-100">Clusters</h4>
-    <button
-      onclick={() => (showCreate = true)}
-      class="px-4 py-2 rounded-lg bg-brand text-gray-900 text-sm font-semibold hover:bg-brand-dim transition-colors"
-    >
-      + New cluster
-    </button>
+    <div class="flex items-center gap-2">
+      {#if profiles.length > 0}
+        <div class="relative">
+          <button
+            onclick={() => profileDropdownOpen = !profileDropdownOpen}
+            class="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-1.5"
+          >
+            From profile
+            <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 20 20" fill="none">
+              <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          {#if profileDropdownOpen}
+            <div class="absolute right-0 z-10 mt-1 min-w-40 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg overflow-hidden">
+              {#each profiles as p}
+                <button
+                  type="button"
+                  onclick={() => createFromProfile(p)}
+                  class="w-full text-left px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  {p.name}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/if}
+      <button
+        onclick={() => (showCreate = true)}
+        class="px-4 py-2 rounded-lg bg-brand text-gray-900 text-sm font-semibold hover:bg-brand-dim transition-colors"
+      >
+        + New cluster
+      </button>
+    </div>
   </div>
 
   <ErrorAlert bind:message={error} />
