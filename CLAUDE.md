@@ -63,7 +63,7 @@ wails3 generate bindings -clean=true -ts
 
 - `go build ./...` from project root fails (iOS build artifact); use `go build ./service/... ./dto/...` to verify Go packages
 - `sigs.k8s.io/yaml` is an indirect dep; run `go get sigs.k8s.io/yaml` if a service file imports it directly
-- `k8s.io/client-go` is an indirect dep — run `go get k8s.io/client-go@<version> && go mod tidy` to promote before importing `k8s.io/client-go/tools/clientcmd` (or similar) directly
+- `k8s.io/client-go` and `k8s.io/apimachinery` are direct deps — use `kubernetes.NewForConfig` + `clientcmd.NewDefaultClientConfig(*kubecfg, nil).ClientConfig()` to talk to the cluster API programmatically; prefer this over `rt.ExecInNode` with `kubectl`
 - `service/kubeconfig.go` owns context CRUD (`ListContexts`, `SetCurrentContext`, `DeleteContext`); delete also prunes dangling cluster/user entries from the kubeconfig file
 - `Dialog.OpenFile().AddFilter(displayName, pattern string)` — pattern is one string (`"*.yaml;*.yml"`), not variadic
 - Svelte `<script>` imports: omit `.ts` extension (requires `allowImportingTsExtensions` otherwise); `.svelte` extension is fine
@@ -78,6 +78,10 @@ wails3 generate bindings -clean=true -ts
 - `service/logger.go` owns `WithTarget(name) func()` — registers current goroutine ID → name in `goroutineTarget sync.Map`; call `defer WithTarget(name)()` at the start of any service method to stamp `Target` on all logs emitted from that goroutine (including k3d logrus logs).
 - Color roles: `brand` = lime `#CDF700` (button backgrounds, use `text-gray-900` not `text-white`); `accent` = cyan `#0DCEFF` (focus rings, active text, links). Grays are neutral/no blue tint; `gray-900 = #1A1A1A` matches k3d dark bg.
 - Custom `<select>` styling: global `appearance: none` + SVG chevron via `background-image` in `app.css`; use `bg-white dark:bg-gray-800` (not `bg-transparent`) so the chevron is visible.
+- Native `<select>` inside a WebView2 modal closes on `mouseup` — use a custom button+listbox (`$state` open flag + `{#if}` panel) for any dropdown inside a modal overlay
+- Node upgrade blue-green replace: (1) rename old node to free the name, (2) re-fetch cluster so `NodeAddToCluster` sees the renamed container, (3) use `cleanStaleNodeState` to delete the k8s Node object and `<name>.node-password.k3s` secret before creating replacement — stale password hash → permanent 403; stale flannel annotations (`public-ip`) → networking crash in new container
+- Server node upgrade is not feasible with SQLite/kine datastore: cluster state lives in a container-specific Docker volume inaccessible to a new container — hide Upgrade for `role === "server"` nodes
+- `ListNodes` / any `ClusterGet` call can hang: `GetLoadbalancerConfig` does `ReadFromNode` (Docker `CopyFromContainer`) on the LB container; wrap with `context.WithTimeout` (10s) to prevent indefinite block
 - `helm.sh/helm/v3` is a direct dep — add via `go get helm.sh/helm/v3/pkg/action helm.sh/helm/v3/pkg/chart/loader helm.sh/helm/v3/pkg/cli` (module root alone doesn't work)
 - Helm `action.Upgrade` has no `CreateNamespace` field — that's on `action.Install` only. Upgrade-or-install: check `action.NewHistory(...).Run(releaseName)`; if `driver.ErrReleaseNotFound` → `action.NewInstall` with `CreateNamespace=true`, else `action.NewUpgrade`
 - `action.Pull` with `Untar=true` untars into `UntarDir/<chart-name>/`, not `UntarDir/` directly — use `filepath.Join(pull.UntarDir, entry.Chart)` to load

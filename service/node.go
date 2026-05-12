@@ -7,9 +7,12 @@ import (
 
 	k3dclient "github.com/k3d-io/k3d/v5/pkg/client"
 	k3d "github.com/k3d-io/k3d/v5/pkg/types"
-	"github.com/k3d-io/k3d/v5/pkg/runtimes"
 	k3dversion "github.com/k3d-io/k3d/v5/version"
 	"github.com/k3desktop/k3desktop/dto"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 type NodeService struct{}
@@ -130,7 +133,7 @@ func (s *NodeService) UpgradeNode(ctx context.Context, nodeName, image string) e
 	// (<nodename>.node-password.k3s in kube-system). A new container with the same
 	// hostname generates a fresh password that won't match the stored hash, causing
 	// the server to permanently reject registration. Delete the stale secret first.
-	if err := cleanStaleNodeState(ctx, rt, cluster, nodeName); err != nil {
+	if err := cleanStaleNodeState(ctx, cluster, nodeName); err != nil {
 		_ = rt.RenameNode(ctx, oldNode, nodeName)
 		return fmt.Errorf("clean stale node state: %w", err)
 	}
@@ -165,21 +168,30 @@ func (s *NodeService) UpgradeNode(ctx context.Context, nodeName, image string) e
 //     flannel.alpha.coreos.com/public-ip pointing to the old container's IP). flannel
 //     in the new container reads those stale annotations, tries to find an interface
 //     that doesn't exist, and crashes before kubelet can post status.
-func cleanStaleNodeState(ctx context.Context, rt runtimes.Runtime, cluster *k3d.Cluster, nodeName string) error {
-	var serverNode *k3d.Node
-	for _, n := range cluster.Nodes {
-		if n.Role == k3d.ServerRole {
-			serverNode = n
-			break
-		}
+func cleanStaleNodeState(ctx context.Context, cluster *k3d.Cluster, nodeName string) error {
+	kubecfg, err := k3dclient.KubeconfigGet(ctx, GetRuntime(), cluster)
+	if err != nil {
+		return fmt.Errorf("get kubeconfig: %w", err)
 	}
-	if serverNode == nil {
-		return fmt.Errorf("no server node found in cluster %s", cluster.Name)
+	restCfg, err := clientcmd.NewDefaultClientConfig(*kubecfg, nil).ClientConfig()
+	if err != nil {
+		return fmt.Errorf("build rest config: %w", err)
 	}
+	kc, err := kubernetes.NewForConfig(restCfg)
+	if err != nil {
+		return fmt.Errorf("build k8s client: %w", err)
+	}
+
 	secretName := nodeName + ".node-password.k3s"
-	cmd := []string{"sh", "-c", fmt.Sprintf(
-		"kubectl delete secret -n kube-system %s --ignore-not-found=true && kubectl delete node %s --ignore-not-found=true",
-		secretName, nodeName,
-	)}
-	return rt.ExecInNode(ctx, serverNode, cmd)
+	err = kc.CoreV1().Secrets("kube-system").Delete(ctx, secretName, metav1.DeleteOptions{})
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return fmt.Errorf("delete node-password secret: %w", err)
+	}
+
+	err = kc.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return fmt.Errorf("delete node object: %w", err)
+	}
+
+	return nil
 }
