@@ -34,9 +34,11 @@ func main() {
 	})
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:  "K3Desktop",
-		Width:  1200,
-		Height: 800,
+		Title:     "K3Desktop",
+		Width:     1200,
+		Height:    800,
+		MinWidth:  800,
+		MinHeight: 600,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,

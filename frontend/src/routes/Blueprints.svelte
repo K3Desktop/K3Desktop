@@ -196,7 +196,7 @@
     <div class="grid gap-4">
       {#each blueprints as bp}
         <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 flex-wrap">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2">
                 <span class="font-medium text-gray-900 dark:text-gray-100">{bp.name}</span>
@@ -208,7 +208,7 @@
                 <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400 truncate">{bp.description}</p>
               {/if}
             </div>
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-2 flex-wrap">
               <button
                 onclick={() => openDeploy(bp)}
                 disabled={!!busy[bp.name]}

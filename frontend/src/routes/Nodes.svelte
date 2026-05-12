@@ -193,8 +193,8 @@
   {:else if nodes.length === 0}
     <div class="text-sm text-gray-400 dark:text-gray-500">{selected ? "No nodes." : "Select a cluster."}</div>
   {:else}
-    <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <table class="w-full text-sm">
+    <div class="rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto">
+      <table class="w-full min-w-max text-sm">
         <thead class="bg-gray-50 dark:bg-gray-800/50">
           <tr>
             <th class="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Name</th>
