@@ -45,7 +45,7 @@ Available in: English · Italiano · Español · Français · Deutsch
 
 ## Building from Source
 
-**Requirements:** Go ≥1.25.8, Node.js ≥22, [Wails v3 CLI](https://v3.wails.io/), [Task](https://taskfile.dev/)
+**Requirements:** Go ≥1.25.10, Node.js ≥22, [Wails v3 CLI](https://v3.wails.io/), [Task](https://taskfile.dev/)
 
 ```bash
 git clone https://github.com/k3desktop/k3desktop.git

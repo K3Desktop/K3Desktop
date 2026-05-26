@@ -1,6 +1,6 @@
 module github.com/k3desktop/k3desktop
 
-go 1.25.8
+go 1.25.10
 
 require (
 	github.com/docker/docker v28.3.3+incompatible
