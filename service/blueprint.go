@@ -171,6 +171,12 @@ func deployChart(req dto.BlueprintDeployRequest, entry dto.ChartEntryDTO) error 
 	}
 	defer os.RemoveAll(tmpDir)
 
+	// strip optional "repo-alias/chart" prefix — only the chart name goes to pull.Run
+	chartName := entry.Chart
+	if idx := strings.LastIndex(chartName, "/"); idx >= 0 {
+		chartName = chartName[idx+1:]
+	}
+
 	pull := action.NewPullWithOpts(action.WithConfig(actionConfig))
 	pull.Settings = settings
 	pull.RepoURL = entry.Repo
@@ -179,13 +185,13 @@ func deployChart(req dto.BlueprintDeployRequest, entry dto.ChartEntryDTO) error 
 	pull.UntarDir = tmpDir
 	pull.DestDir = tmpDir
 
-	slog.Info(fmt.Sprintf("pulling chart %s/%s@%s", entry.Repo, entry.Chart, entry.Version), "target", req.BlueprintName)
-	if _, err := pull.Run(entry.Chart); err != nil {
-		return fmt.Errorf("pull chart %s: %w", entry.Chart, err)
+	slog.Info(fmt.Sprintf("pulling chart %s/%s@%s", entry.Repo, chartName, entry.Version), "target", req.BlueprintName)
+	if _, err := pull.Run(chartName); err != nil {
+		return fmt.Errorf("pull chart %s: %w", chartName, err)
 	}
 
 	// helm pull untars into tmpDir/<chart-name>/
-	chartDir := filepath.Join(tmpDir, entry.Chart)
+	chartDir := filepath.Join(tmpDir, chartName)
 	ch, err := loader.Load(chartDir)
 	if err != nil {
 		return fmt.Errorf("load chart: %w", err)

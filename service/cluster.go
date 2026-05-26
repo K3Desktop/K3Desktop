@@ -164,15 +164,64 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, name string) error {
 
 func (s *ClusterService) StartCluster(ctx context.Context, name string) error {
 	defer WithTarget(name)()
-	c, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: name})
+	rt := GetRuntime()
+
+	slog.Info("starting cluster", "cluster", name)
+
+	c, err := k3dclient.ClusterGet(ctx, rt, &k3d.Cluster{Name: name})
 	if err != nil {
 		return err
 	}
-	envInfo, err := k3dclient.GatherEnvironmentInfo(ctx, GetRuntime(), c)
+
+	slog.Debug("gathering environment info for cluster start", "cluster", name)
+
+	envInfo, err := k3dclient.GatherEnvironmentInfo(ctx, rt, c)
 	if err != nil {
 		return fmt.Errorf("gather environment info: %w", err)
 	}
-	return k3dclient.ClusterStart(ctx, GetRuntime(), c, k3d.ClusterStartOpts{
+
+	slog.Debug("starting server nodes", "cluster", name)
+	// Start the server nodes first and wait for them to be ready, so the apiserver
+	// is reachable before we try to clean stale agent state.
+	for _, node := range c.Nodes {
+		if node.State.Running || node.Role != k3d.ServerRole {
+			continue
+		}
+		if err := k3dclient.NodeStart(ctx, rt, node, &k3d.NodeStartOpts{
+			Wait:            true,
+			EnvironmentInfo: envInfo,
+		}); err != nil {
+			return fmt.Errorf("start server node %s: %w", node.Name, err)
+		}
+	}
+
+	slog.Debug("re-fetch cluster to gather its state")
+	// Re-fetch cluster so we have the updated server node state (running=true, fresh IPs).
+	c, err = k3dclient.ClusterGet(ctx, rt, &k3d.Cluster{Name: name})
+	if err != nil {
+		return fmt.Errorf("re-fetch cluster after server start: %w", err)
+	}
+
+	// After a cluster restart Docker assigns new IPs to containers. Agent Node objects
+	// in Kubernetes still carry the old IPs in flannel annotations, causing flannel to
+	// fail with "failed to find interface with specified node ip" and shut down k3s.
+	// Delete the stale Node objects so agents rejoin cleanly with their new IPs.
+
+	slog.Debug("cleaning stale agent node state", "cluster", name)
+	for _, node := range c.Nodes {
+		if node.Role != k3d.AgentRole {
+			continue
+		}
+		if err := cleanStaleNodeState(ctx, c, node.Name); err != nil {
+			// Non-fatal: log and continue. If the node object is missing or apiserver
+			// not yet ready, k3s will still attempt to start; the error will surface there.
+			slog.Warn("clean stale agent node state on cluster start", "node", node.Name, "err", err)
+		}
+	}
+
+	slog.Debug("starting agent nodes", "cluster", name)
+	// Start agent nodes (and any remaining aux nodes like load-balancer) via the normal path.
+	return k3dclient.ClusterStart(ctx, rt, c, k3d.ClusterStartOpts{
 		EnvironmentInfo: envInfo,
 	})
 }
