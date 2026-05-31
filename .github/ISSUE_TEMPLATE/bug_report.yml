@@ -15,23 +15,25 @@ body:
         - macOS (Apple Silicon)
         - macOS (Intel)
         - Linux
+        - Windows
         - Other
     validations:
       required: true
+
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version
+      placeholder: "e.g. 10.15.7"
+    validations:
+      required: true
+
 
   - type: input
     id: version
     attributes:
       label: K3Desktop version
       placeholder: "e.g. 0.1.0"
-    validations:
-      required: true
-
-  - type: input
-    id: docker
-    attributes:
-      label: Docker version
-      placeholder: "docker --version output"
     validations:
       required: true
 
