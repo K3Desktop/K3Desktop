@@ -31,6 +31,9 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
+		Linux: application.LinuxOptions{
+			ProgramName: "k3desktop",
+		},
 	})
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
