@@ -8,6 +8,6 @@ Terminal=false
 Type=Application
 Icon=k3desktop
 Categories=Utility;
-StartupWMClass=k3desktop
+StartupWMClass=org.wails.k3desktop
 
  

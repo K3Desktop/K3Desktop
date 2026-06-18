@@ -9,4 +9,4 @@ Keywords=wails
 Version=1.0
 StartupNotify=true
 
-StartupWMClass=k3desktop
+StartupWMClass=org.wails.k3desktop

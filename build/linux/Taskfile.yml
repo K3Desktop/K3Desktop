@@ -180,7 +180,8 @@ tasks:
       - mkdir -p {{.ROOT_DIR}}/build/linux/appimage
       - wails3 generate .desktop -name "{{.APP_NAME}}" -exec "{{.EXEC}}" -icon "{{.ICON}}" -outputfile "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" -categories "{{.CATEGORIES}}"
       - |
-        grep -q '^StartupWMClass=' "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" || printf '\nStartupWMClass={{.APP_NAME}}\n' >> "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop"
+        grep -q '^StartupWMClass=' "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop" || printf '\nStartupWMClass=org.wails.{{.APP_NAME}}\n' >> "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop"
+        sed -i 's/^StartupWMClass={{.APP_NAME}}$/StartupWMClass=org.wails.{{.APP_NAME}}/' "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop"
         sed -i 's/^StartupNotify=false$/StartupNotify=true/' "{{.ROOT_DIR}}/build/linux/{{.APP_NAME}}.desktop"
     vars:
       APP_NAME: '{{.APP_NAME}}'
