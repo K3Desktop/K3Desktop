@@ -23,6 +23,10 @@ export function ListNodes(clusterName: string): $CancellablePromise<dto$0.NodeDT
     });
 }
 
+export function RestartNode(nodeName: string): $CancellablePromise<void> {
+    return $Call.ByID(2181371209, nodeName);
+}
+
 export function StartNode(nodeName: string): $CancellablePromise<void> {
     return $Call.ByID(2040106362, nodeName);
 }

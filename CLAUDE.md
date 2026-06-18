@@ -89,6 +89,7 @@ wails3 generate bindings -clean=true -ts
 - `src/lib/theme.ts` also owns `sidebarWidth` and `sidebarCollapsed` stores (persisted to `localStorage`); Sidebar receives them as plain props + `onWidthChange`/`onCollapsedChange` callbacks, not `$bindable`
 - Svelte `flex-1` without `min-w-0` lets long text overflow parent — always pair: `flex-1 min-w-0 break-words`
 - `service/blueprint.go` owns blueprint CRUD + Helm deploy; blueprints stored at `~/.config/k3desktop/blueprints/<name>.yaml`
+- `rt.StopNode` / `rt.StartNode` are thin `docker stop` / `docker start` wrappers — use them directly for restart. `k3dclient.NodeStart` adds pre-start hooks (DNS fix, CgroupsV2) only needed on fresh container creation, not restarts.
 
 ### Async events pattern
 

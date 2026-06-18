@@ -100,6 +100,19 @@ func (s *NodeService) StopNode(ctx context.Context, nodeName string) error {
 	return GetRuntime().StopNode(ctx, node)
 }
 
+func (s *NodeService) RestartNode(ctx context.Context, nodeName string) error {
+	defer WithTarget(nodeName)()
+	rt := GetRuntime()
+	node, err := k3dclient.NodeGet(ctx, rt, &k3d.Node{Name: nodeName})
+	if err != nil {
+		return err
+	}
+	if err := rt.StopNode(ctx, node); err != nil {
+		return err
+	}
+	return rt.StartNode(ctx, node)
+}
+
 func (s *NodeService) UpgradeNode(ctx context.Context, nodeName, image string) error {
 	defer WithTarget(nodeName)()
 	rt := GetRuntime()

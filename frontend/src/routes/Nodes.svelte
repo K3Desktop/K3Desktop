@@ -96,6 +96,20 @@
     }
   }
 
+  async function restartNode(n: NodeDTO) {
+    busy[n.name] = true;
+    visibleLogs[n.name] = true;
+    clearOpLog(n.name);
+    try {
+      await NodeService.RestartNode(n.name);
+      await loadNodes();
+    } catch (e: any) {
+      error = String(e);
+    } finally {
+      delete busy[n.name];
+    }
+  }
+
   async function openUpgradeModal(n: NodeDTO) {
     upgradeModalNode = n;
     upgradeImage = "";
@@ -231,6 +245,15 @@
                   >
                     {n.state === "running" ? "Stop" : "Start"}
                   </button>
+                  {#if n.state === "running"}
+                    <button
+                      onclick={() => restartNode(n)}
+                      disabled={isBusy}
+                      class="px-2.5 py-1 rounded text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Restart
+                    </button>
+                  {/if}
                   {#if n.role === "agent"}
                   <button
                     onclick={() => openUpgradeModal(n)}
