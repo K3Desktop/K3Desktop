@@ -5,11 +5,22 @@
 // @ts-ignore: Unused imports
 import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
-export function ListK3sVersions(limit: number): $CancellablePromise<string[]> {
-    return $Call.ByID(2342177786, limit).then(($result: any) => {
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as dto$0 from "../dto/models.js";
+
+export function GetAppVersion(): $CancellablePromise<dto$0.AppVersionDTO> {
+    return $Call.ByID(393498837).then(($result: any) => {
         return $$createType0($result);
     });
 }
 
+export function ListK3sVersions(limit: number): $CancellablePromise<string[]> {
+    return $Call.ByID(2342177786, limit).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
 // Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);
+const $$createType0 = dto$0.AppVersionDTO.createFrom;
+const $$createType1 = $Create.Array($Create.Any);

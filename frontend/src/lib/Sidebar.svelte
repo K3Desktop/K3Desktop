@@ -1,5 +1,8 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { dark } from "./theme";
+  import { VersionService } from "../../bindings/github.com/k3desktop/k3desktop/service";
+  import type { AppVersionDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
 
   type Route = "clusters" | "nodes" | "registries" | "kubeconfig" | "profiles" | "blueprints";
 
@@ -32,6 +35,11 @@
   let dragging = $state(false);
   let dragStartX = 0;
   let dragStartWidth = 0;
+  let appVersion = $state<AppVersionDTO | null>(null);
+
+  onMount(async () => {
+    appVersion = await VersionService.GetAppVersion();
+  });
 
   const nav: { id: Route; label: string; icon: string }[] = [
     { id: "clusters",   label: "Clusters",   icon: "⬡" },
@@ -174,6 +182,14 @@
           {/each}
         </select>
       </div>
+      {#if appVersion}
+        <div class="px-3 pt-1 pb-0.5">
+          <span
+            class="text-xs text-gray-400 dark:text-gray-500 cursor-default select-none"
+            title="Build: {appVersion.buildDate} · {appVersion.commitHash}"
+          >v{appVersion.version}</span>
+        </div>
+      {/if}
     {/if}
   </div>
 

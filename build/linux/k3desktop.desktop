@@ -8,4 +8,5 @@ Terminal=false
 Keywords=wails
 Version=1.0
 StartupNotify=true
+
 StartupWMClass=k3desktop

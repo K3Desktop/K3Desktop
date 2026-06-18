@@ -4,10 +4,24 @@ import (
 	"context"
 	"regexp"
 	"sort"
+
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/k3desktop/k3desktop/dto"
 )
 
-type VersionService struct{}
+type VersionService struct {
+	AppVersion    string
+	AppBuildDate  string
+	AppCommitHash string
+}
+
+func (s *VersionService) GetAppVersion() dto.AppVersionDTO {
+	return dto.AppVersionDTO{
+		Version:    s.AppVersion,
+		BuildDate:  s.AppBuildDate,
+		CommitHash: s.AppCommitHash,
+	}
+}
 
 var (
 	k3sExclude = regexp.MustCompile(`^sha-|.+(rc|engine|dind|alpha|beta|dev|test|arm|arm64|amd64|s390x).*`)

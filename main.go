@@ -20,7 +20,11 @@ func main() {
 			application.NewService(&service.NodeService{}),
 			application.NewService(&service.RegistryService{}),
 			application.NewService(&service.KubeconfigService{}),
-			application.NewService(&service.VersionService{}),
+			application.NewService(&service.VersionService{
+				AppVersion:    Version,
+				AppBuildDate:  BuildDate,
+				AppCommitHash: CommitHash,
+			}),
 			application.NewService(&service.ProfileService{}),
 			application.NewService(&service.LogService{}),
 			application.NewService(&service.BlueprintService{}),

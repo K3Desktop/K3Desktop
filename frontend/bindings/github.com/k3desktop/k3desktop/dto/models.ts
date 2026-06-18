@@ -5,6 +5,35 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export class AppVersionDTO {
+    "version": string;
+    "buildDate": string;
+    "commitHash": string;
+
+    /** Creates a new AppVersionDTO instance. */
+    constructor($$source: Partial<AppVersionDTO> = {}) {
+        if (!("version" in $$source)) {
+            this["version"] = "";
+        }
+        if (!("buildDate" in $$source)) {
+            this["buildDate"] = "";
+        }
+        if (!("commitHash" in $$source)) {
+            this["commitHash"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AppVersionDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AppVersionDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AppVersionDTO($$parsedSource as Partial<AppVersionDTO>);
+    }
+}
+
 export class BlueprintDTO {
     "name": string;
     "description": string;
