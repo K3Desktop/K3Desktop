@@ -21,20 +21,40 @@ export function DeleteCluster(name: string): $CancellablePromise<string> {
     return $Call.ByID(2212415657, name);
 }
 
-export function ListClusters(): $CancellablePromise<dto$0.ClusterDTO[]> {
-    return $Call.ByID(488719565).then(($result: any) => {
+export function GetLoadBalancer(clusterName: string): $CancellablePromise<dto$0.LoadBalancerDTO | null> {
+    return $Call.ByID(1972176636, clusterName).then(($result: any) => {
         return $$createType1($result);
     });
+}
+
+export function ListClusters(): $CancellablePromise<dto$0.ClusterDTO[]> {
+    return $Call.ByID(488719565).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+export function RestartLoadBalancer(clusterName: string): $CancellablePromise<string> {
+    return $Call.ByID(658517011, clusterName);
 }
 
 export function StartCluster(name: string): $CancellablePromise<string> {
     return $Call.ByID(372684744, name);
 }
 
+export function StartLoadBalancer(clusterName: string): $CancellablePromise<string> {
+    return $Call.ByID(4197986832, clusterName);
+}
+
 export function StopCluster(name: string): $CancellablePromise<string> {
     return $Call.ByID(3867105232, name);
 }
 
+export function StopLoadBalancer(clusterName: string): $CancellablePromise<string> {
+    return $Call.ByID(1824931000, clusterName);
+}
+
 // Private type creation functions
-const $$createType0 = dto$0.ClusterDTO.createFrom;
-const $$createType1 = $Create.Array($$createType0);
+const $$createType0 = dto$0.LoadBalancerDTO.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = dto$0.ClusterDTO.createFrom;
+const $$createType3 = $Create.Array($$createType2);

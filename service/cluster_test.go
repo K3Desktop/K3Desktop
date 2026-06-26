@@ -343,6 +343,70 @@ func TestClusterToDTO_CreatedUsesFirstServer(t *testing.T) {
 	}
 }
 
+func TestLoadbalancerToDTO(t *testing.T) {
+	n := &k3d.Node{
+		Name:  "k3d-foo-serverlb",
+		Role:  k3d.LoadBalancerRole,
+		Image: "rancher/k3d-proxy:v5.7.0",
+		State: k3d.NodeState{Running: true},
+		RuntimeLabels: map[string]string{
+			k3d.LabelClusterName: "foo",
+		},
+		Ports: nat.PortMap{
+			"6443/tcp": []nat.PortBinding{{HostIP: "0.0.0.0", HostPort: "6443"}},
+			"80/tcp":   []nat.PortBinding{{HostIP: "", HostPort: "8080"}},
+		},
+	}
+
+	d := loadbalancerToDTO(n)
+
+	if d.Name != "k3d-foo-serverlb" {
+		t.Errorf("Name = %q, want %q", d.Name, "k3d-foo-serverlb")
+	}
+	if d.ClusterName != "foo" {
+		t.Errorf("ClusterName = %q, want %q", d.ClusterName, "foo")
+	}
+	if d.State != "running" {
+		t.Errorf("State = %q, want %q", d.State, "running")
+	}
+	if d.Image != "rancher/k3d-proxy:v5.7.0" {
+		t.Errorf("Image = %q, want %q", d.Image, "rancher/k3d-proxy:v5.7.0")
+	}
+	if len(d.Ports) != 2 {
+		t.Fatalf("Ports len = %d, want 2", len(d.Ports))
+	}
+	// Sorted: "0.0.0.0:6443→6443/tcp" then "0.0.0.0:8080→80/tcp"
+	want0 := "0.0.0.0:6443→6443/tcp"
+	want1 := "0.0.0.0:8080→80/tcp"
+	if d.Ports[0] != want0 {
+		t.Errorf("Ports[0] = %q, want %q", d.Ports[0], want0)
+	}
+	if d.Ports[1] != want1 {
+		t.Errorf("Ports[1] = %q, want %q", d.Ports[1], want1)
+	}
+}
+
+func TestLoadbalancerToDTO_Stopped(t *testing.T) {
+	n := &k3d.Node{
+		Name:  "k3d-foo-serverlb",
+		Role:  k3d.LoadBalancerRole,
+		Image: "img",
+		State: k3d.NodeState{Running: false, Status: "exited"},
+		RuntimeLabels: map[string]string{
+			k3d.LabelClusterName: "foo",
+		},
+	}
+
+	d := loadbalancerToDTO(n)
+
+	if d.State != "exited" {
+		t.Errorf("State = %q, want %q", d.State, "exited")
+	}
+	if len(d.Ports) != 0 {
+		t.Errorf("Ports len = %d, want 0", len(d.Ports))
+	}
+}
+
 // TestNodeDTO_Fields verifies the NodeDTO fields are correctly populated.
 func TestNodeDTO_Fields(t *testing.T) {
 	n := dto.NodeDTO{

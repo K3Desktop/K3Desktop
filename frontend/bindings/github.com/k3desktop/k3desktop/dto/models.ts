@@ -689,6 +689,55 @@ export class KubeconfigContextDTO {
     }
 }
 
+export class LoadBalancerDTO {
+    "name": string;
+    "clusterName": string;
+
+    /**
+     * "running" | "stopped"
+     */
+    "state": string;
+    "image": string;
+
+    /**
+     * "hostIP:hostPort→containerPort/proto"
+     */
+    "ports": string[];
+
+    /** Creates a new LoadBalancerDTO instance. */
+    constructor($$source: Partial<LoadBalancerDTO> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("clusterName" in $$source)) {
+            this["clusterName"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("image" in $$source)) {
+            this["image"] = "";
+        }
+        if (!("ports" in $$source)) {
+            this["ports"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LoadBalancerDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): LoadBalancerDTO {
+        const $$createField4_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("ports" in $$parsedSource) {
+            $$parsedSource["ports"] = $$createField4_0($$parsedSource["ports"]);
+        }
+        return new LoadBalancerDTO($$parsedSource as Partial<LoadBalancerDTO>);
+    }
+}
+
 export class LogEntryDTO {
     "time": string;
     "level": string;

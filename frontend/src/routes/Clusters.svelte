@@ -4,6 +4,7 @@
   import { ClusterCreateRequest, ClusterCreateAdvancedRequest, NodeFilter, UlimitDTO, FileDTO, HostAliasDTO, ClusterDTO, ProfileDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
   import ClusterForm from "../lib/ClusterForm.svelte";
   import OpLog from "../lib/OpLog.svelte";
+  import LoadBalancerPanel from "../lib/LoadBalancerPanel.svelte";
   import { clusterFormPrefill, defaultAdv, advToDto, dtoToAdv } from "../lib/prefill";
   import { clearOpLog } from "../lib/logStore";
   import { operations, dismiss as dismissOp } from "../lib/operationsStore";
@@ -303,6 +304,7 @@
           {#if visibleLogs[c.name]}
             <OpLog active={busy} target={c.name} onclose={() => { delete visibleLogs[c.name]; }} />
           {/if}
+          <LoadBalancerPanel clusterName={c.name} clusterStatus={c.status} />
         </div>
       {/each}
     </div>

@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strings"
+	"time"
 
 	k3dclient "github.com/k3d-io/k3d/v5/pkg/client"
 	k3dconfig "github.com/k3d-io/k3d/v5/pkg/config"
@@ -342,4 +344,138 @@ func nodeState(n *k3d.Node) string {
 		return "running"
 	}
 	return n.State.Status
+}
+
+func loadbalancerToDTO(n *k3d.Node) *dto.LoadBalancerDTO {
+	ports := make([]string, 0, len(n.Ports))
+	for containerPort, bindings := range n.Ports {
+		for _, b := range bindings {
+			host := b.HostIP
+			if host == "" {
+				host = "0.0.0.0"
+			}
+			ports = append(ports, fmt.Sprintf("%s:%s→%s", host, b.HostPort, containerPort))
+		}
+	}
+	sort.Strings(ports)
+	return &dto.LoadBalancerDTO{
+		Name:        n.Name,
+		ClusterName: n.RuntimeLabels[k3d.LabelClusterName],
+		State:       nodeState(n),
+		Image:       n.Image,
+		Ports:       ports,
+	}
+}
+
+func findLoadBalancer(c *k3d.Cluster) *k3d.Node {
+	for _, n := range c.Nodes {
+		if n.Role == k3d.LoadBalancerRole {
+			return n
+		}
+	}
+	return nil
+}
+
+func (s *ClusterService) GetLoadBalancer(ctx context.Context, clusterName string) (*dto.LoadBalancerDTO, error) {
+	if clusterName == "" {
+		return nil, fmt.Errorf("cluster name required")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	c, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: clusterName})
+	if err != nil {
+		return nil, err
+	}
+	lb := findLoadBalancer(c)
+	if lb == nil {
+		return nil, nil
+	}
+	return loadbalancerToDTO(lb), nil
+}
+
+func (s *ClusterService) StartLoadBalancer(_ context.Context, clusterName string) (string, error) {
+	if clusterName == "" {
+		return "", fmt.Errorf("cluster name required")
+	}
+	id, done := StartOp("lb.start", clusterName)
+	go func() {
+		defer WithTarget(clusterName)()
+		var err error
+		defer func() { done(err) }()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		rt := GetRuntime()
+		c, getErr := k3dclient.ClusterGet(ctx, rt, &k3d.Cluster{Name: clusterName})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		lb := findLoadBalancer(c)
+		if lb == nil {
+			err = fmt.Errorf("cluster %s has no loadbalancer", clusterName)
+			return
+		}
+		err = rt.StartNode(context.Background(), lb)
+	}()
+	return id, nil
+}
+
+func (s *ClusterService) StopLoadBalancer(_ context.Context, clusterName string) (string, error) {
+	if clusterName == "" {
+		return "", fmt.Errorf("cluster name required")
+	}
+	id, done := StartOp("lb.stop", clusterName)
+	go func() {
+		defer WithTarget(clusterName)()
+		var err error
+		defer func() { done(err) }()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		rt := GetRuntime()
+		c, getErr := k3dclient.ClusterGet(ctx, rt, &k3d.Cluster{Name: clusterName})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		lb := findLoadBalancer(c)
+		if lb == nil {
+			err = fmt.Errorf("cluster %s has no loadbalancer", clusterName)
+			return
+		}
+		err = rt.StopNode(context.Background(), lb)
+	}()
+	return id, nil
+}
+
+func (s *ClusterService) RestartLoadBalancer(_ context.Context, clusterName string) (string, error) {
+	if clusterName == "" {
+		return "", fmt.Errorf("cluster name required")
+	}
+	id, done := StartOp("lb.restart", clusterName)
+	go func() {
+		defer WithTarget(clusterName)()
+		var err error
+		defer func() { done(err) }()
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		rt := GetRuntime()
+		c, getErr := k3dclient.ClusterGet(ctx, rt, &k3d.Cluster{Name: clusterName})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		lb := findLoadBalancer(c)
+		if lb == nil {
+			err = fmt.Errorf("cluster %s has no loadbalancer", clusterName)
+			return
+		}
+		if lb.State.Running {
+			if stopErr := rt.StopNode(context.Background(), lb); stopErr != nil {
+				err = stopErr
+				return
+			}
+		}
+		err = rt.StartNode(context.Background(), lb)
+	}()
+	return id, nil
 }

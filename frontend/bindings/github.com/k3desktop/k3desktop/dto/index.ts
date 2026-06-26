@@ -13,6 +13,7 @@ export {
     FileDTO,
     HostAliasDTO,
     KubeconfigContextDTO,
+    LoadBalancerDTO,
     LogEntryDTO,
     NodeDTO,
     NodeFilter,
