@@ -799,6 +799,73 @@ export class NodeFilter {
     }
 }
 
+/**
+ * OperationEventDTO is the unified payload for op:start / op:done / op:error events.
+ * One operation has a stable ID across all three phases so the frontend can correlate.
+ */
+export class OperationEventDTO {
+    "id": string;
+
+    /**
+     * e.g. "cluster.start", "node.upgrade"
+     */
+    "kind": string;
+
+    /**
+     * cluster/node/registry name
+     */
+    "target": string;
+
+    /**
+     * "start" | "done" | "error"
+     */
+    "phase": string;
+
+    /**
+     * optional human-readable status
+     */
+    "message"?: string;
+
+    /**
+     * populated when phase == "error"
+     */
+    "error"?: string;
+
+    /**
+     * RFC3339
+     */
+    "startedAt": string;
+
+    /** Creates a new OperationEventDTO instance. */
+    constructor($$source: Partial<OperationEventDTO> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("kind" in $$source)) {
+            this["kind"] = "";
+        }
+        if (!("target" in $$source)) {
+            this["target"] = "";
+        }
+        if (!("phase" in $$source)) {
+            this["phase"] = "";
+        }
+        if (!("startedAt" in $$source)) {
+            this["startedAt"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new OperationEventDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): OperationEventDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new OperationEventDTO($$parsedSource as Partial<OperationEventDTO>);
+    }
+}
+
 export class ProfileDTO {
     /**
      * filename stem, e.g. "dev-cluster"

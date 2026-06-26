@@ -18,6 +18,8 @@ export function DeleteContext(contextName: string): $CancellablePromise<void> {
 
 /**
  * ExportKubeconfig merges cluster kubeconfig into ~/.kube/config and returns the path.
+ * Kept synchronous because the frontend needs the returned path; wrapped with StartOp
+ * so the operations store reflects in-flight state.
  */
 export function ExportKubeconfig(clusterName: string): $CancellablePromise<string> {
     return $Call.ByID(4154605852, clusterName);

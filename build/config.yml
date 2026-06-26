@@ -11,7 +11,7 @@ info:
   description: "A k3d desktop application" # The application description
   copyright: "(c) 2026, K3Desktop" # Copyright text
   comments: "A k3d desktop application" # Comments
-  version: "0.0.1"
+  version: "0.0.5"
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"

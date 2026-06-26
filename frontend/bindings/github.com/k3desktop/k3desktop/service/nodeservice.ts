@@ -9,11 +9,11 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // @ts-ignore: Unused imports
 import * as dto$0 from "../dto/models.js";
 
-export function AddAgent(clusterName: string): $CancellablePromise<void> {
+export function AddAgent(clusterName: string): $CancellablePromise<string> {
     return $Call.ByID(3684008734, clusterName);
 }
 
-export function DeleteNode(nodeName: string): $CancellablePromise<void> {
+export function DeleteNode(nodeName: string): $CancellablePromise<string> {
     return $Call.ByID(1159268401, nodeName);
 }
 
@@ -23,19 +23,19 @@ export function ListNodes(clusterName: string): $CancellablePromise<dto$0.NodeDT
     });
 }
 
-export function RestartNode(nodeName: string): $CancellablePromise<void> {
+export function RestartNode(nodeName: string): $CancellablePromise<string> {
     return $Call.ByID(2181371209, nodeName);
 }
 
-export function StartNode(nodeName: string): $CancellablePromise<void> {
+export function StartNode(nodeName: string): $CancellablePromise<string> {
     return $Call.ByID(2040106362, nodeName);
 }
 
-export function StopNode(nodeName: string): $CancellablePromise<void> {
+export function StopNode(nodeName: string): $CancellablePromise<string> {
     return $Call.ByID(2625440930, nodeName);
 }
 
-export function UpgradeNode(nodeName: string, image: string): $CancellablePromise<void> {
+export function UpgradeNode(nodeName: string, image: string): $CancellablePromise<string> {
     return $Call.ByID(1505253066, nodeName, image);
 }
 

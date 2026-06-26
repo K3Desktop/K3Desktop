@@ -13,7 +13,7 @@ export function DeleteBlueprint(name: string): $CancellablePromise<void> {
     return $Call.ByID(4106361431, name);
 }
 
-export function DeployBlueprint(req: dto$0.BlueprintDeployRequest): $CancellablePromise<void> {
+export function DeployBlueprint(req: dto$0.BlueprintDeployRequest): $CancellablePromise<string> {
     return $Call.ByID(1831808911, req);
 }
 

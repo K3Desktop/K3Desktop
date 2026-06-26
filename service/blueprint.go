@@ -123,33 +123,44 @@ func (s *BlueprintService) DeleteBlueprint(_ context.Context, name string) error
 	return os.Remove(filepath.Join(dir, name+".yaml"))
 }
 
-func (s *BlueprintService) DeployBlueprint(ctx context.Context, req dto.BlueprintDeployRequest) error {
+func (s *BlueprintService) DeployBlueprint(ctx context.Context, req dto.BlueprintDeployRequest) (string, error) {
 	bp, err := s.GetBlueprint(ctx, req.BlueprintName)
 	if err != nil {
-		return fmt.Errorf("load blueprint: %w", err)
+		return "", fmt.Errorf("load blueprint: %w", err)
 	}
 	if req.Namespace == "" {
 		req.Namespace = "default"
 	}
 
+	id, done := StartOp("blueprint.deploy", req.BlueprintName)
 	go func() {
 		defer WithTarget(req.BlueprintName)()
+		var opErr error
+		defer func() { done(opErr) }()
+
 		app := application.Get()
-		app.Event.Emit("blueprint:deploying", dto.BlueprintEventDTO{Name: req.BlueprintName})
+		if app != nil {
+			app.Event.Emit("blueprint:deploying", dto.BlueprintEventDTO{Name: req.BlueprintName})
+		}
 
 		for _, entry := range bp.Charts {
 			if err := deployChart(req, entry); err != nil {
 				msg := fmt.Sprintf("[%s] %s", entry.ReleaseName, err.Error())
 				slog.Error("blueprint chart deploy failed", "blueprint", req.BlueprintName, "release", entry.ReleaseName, "err", err)
-				app.Event.Emit("blueprint:error", dto.BlueprintEventDTO{Name: req.BlueprintName, Message: msg})
+				if app != nil {
+					app.Event.Emit("blueprint:error", dto.BlueprintEventDTO{Name: req.BlueprintName, Message: msg})
+				}
+				opErr = fmt.Errorf("%s", msg)
 				return
 			}
 		}
 
-		app.Event.Emit("blueprint:done", dto.BlueprintEventDTO{Name: req.BlueprintName})
+		if app != nil {
+			app.Event.Emit("blueprint:done", dto.BlueprintEventDTO{Name: req.BlueprintName})
+		}
 	}()
 
-	return nil
+	return id, nil
 }
 
 func deployChart(req dto.BlueprintDeployRequest, entry dto.ChartEntryDTO) error {

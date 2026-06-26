@@ -10,6 +10,7 @@
   import Sidebar from "./lib/Sidebar.svelte";
   import LogDrawer from "./lib/LogDrawer.svelte";
   import { bootstrapLogs } from "./lib/logStore";
+  import { bootstrapOperations } from "./lib/operationsStore";
   import { sidebarWidth, sidebarCollapsed } from "./lib/theme";
   import { LogService } from "../bindings/github.com/k3desktop/k3desktop/service";
 
@@ -30,6 +31,7 @@
   onMount(async () => {
     try { currentLevel = await LogService.GetLevel(); } catch { /* non-fatal */ }
     bootstrapLogs();
+    bootstrapOperations();
   });
 </script>
 

@@ -36,9 +36,9 @@ func (s *ClusterService) ListClusters(ctx context.Context) ([]dto.ClusterDTO, er
 	return result, nil
 }
 
-func (s *ClusterService) CreateCluster(ctx context.Context, req dto.ClusterCreateRequest) error {
+func (s *ClusterService) CreateCluster(ctx context.Context, req dto.ClusterCreateRequest) (string, error) {
 	if req.Name == "" {
-		return fmt.Errorf("cluster name required")
+		return "", fmt.Errorf("cluster name required")
 	}
 	if req.Servers < 1 {
 		req.Servers = 1
@@ -66,9 +66,9 @@ func (s *ClusterService) CreateCluster(ctx context.Context, req dto.ClusterCreat
 	return runCluster(ctx, simpleConfig)
 }
 
-func (s *ClusterService) CreateClusterAdvanced(ctx context.Context, req dto.ClusterCreateAdvancedRequest) error {
+func (s *ClusterService) CreateClusterAdvanced(ctx context.Context, req dto.ClusterCreateAdvancedRequest) (string, error) {
 	if req.Name == "" {
-		return fmt.Errorf("cluster name required")
+		return "", fmt.Errorf("cluster name required")
 	}
 	if req.Servers < 1 {
 		req.Servers = 1
@@ -79,34 +79,49 @@ func (s *ClusterService) CreateClusterAdvanced(ctx context.Context, req dto.Clus
 	return runCluster(ctx, advancedRequestToSimpleConfig(req))
 }
 
-func runCluster(ctx context.Context, sc confv1alpha5.SimpleConfig) error {
+func runCluster(ctx context.Context, sc confv1alpha5.SimpleConfig) (string, error) {
 	clusterConfig, err := k3dconfig.TransformSimpleToClusterConfig(ctx, GetRuntime(), sc, "")
 	if err != nil {
-		return fmt.Errorf("config transform: %w", err)
+		return "", fmt.Errorf("config transform: %w", err)
 	}
 	clusterConfig, err = k3dconfig.ProcessClusterConfig(*clusterConfig)
 	if err != nil {
-		return fmt.Errorf("config process: %w", err)
+		return "", fmt.Errorf("config process: %w", err)
 	}
 
 	kubeconfigOpts := clusterConfig.KubeconfigOpts
+	id, done := StartOp("cluster.create", sc.Name)
 	go func() {
 		defer WithTarget(sc.Name)()
+		var opErr error
+		defer func() { done(opErr) }()
+
 		app := application.Get()
-		app.Event.Emit("cluster:creating", sc.Name)
+		if app != nil {
+			app.Event.Emit("cluster:creating", sc.Name)
+		}
 		if err := k3dclient.ClusterRun(context.Background(), GetRuntime(), clusterConfig); err != nil {
 			slog.Error("cluster creation failed, attempting rollback", "cluster", sc.Name, "err", err)
 			if sc.Options.K3dOptions.NoRollback {
-				app.Event.Emit("cluster:error", fmt.Sprintf("cluster creation failed (rollback disabled): %v", err))
+				opErr = fmt.Errorf("cluster creation failed (rollback disabled): %w", err)
+				if app != nil {
+					app.Event.Emit("cluster:error", opErr.Error())
+				}
 				return
 			}
 			if rbErr := k3dclient.ClusterDelete(context.Background(), GetRuntime(), &clusterConfig.Cluster, k3d.ClusterDeleteOpts{SkipRegistryCheck: true}); rbErr != nil {
 				slog.Error("rollback failed", "cluster", sc.Name, "err", rbErr)
-				app.Event.Emit("cluster:error", fmt.Sprintf("cluster creation failed and rollback also failed: %v (rollback: %v)", err, rbErr))
+				opErr = fmt.Errorf("cluster creation failed and rollback also failed: %v (rollback: %v)", err, rbErr)
+				if app != nil {
+					app.Event.Emit("cluster:error", opErr.Error())
+				}
 				return
 			}
 			slog.Info("rollback completed", "cluster", sc.Name)
-			app.Event.Emit("cluster:error", fmt.Sprintf("cluster creation failed, changes rolled back: %v", err))
+			opErr = fmt.Errorf("cluster creation failed, changes rolled back: %w", err)
+			if app != nil {
+				app.Event.Emit("cluster:error", opErr.Error())
+			}
 			return
 		}
 		if kubeconfigOpts.UpdateDefaultKubeconfig {
@@ -124,9 +139,11 @@ func runCluster(ctx context.Context, sc confv1alpha5.SimpleConfig) error {
 				slog.Warn("kubeconfig merge failed", "cluster", sc.Name, "err", err)
 			}
 		}
-		app.Event.Emit("cluster:ready", sc.Name)
+		if app != nil {
+			app.Event.Emit("cluster:ready", sc.Name)
+		}
 	}()
-	return nil
+	return id, nil
 }
 
 func splitFilters(s string) []string {
@@ -136,8 +153,22 @@ func splitFilters(s string) []string {
 	return strings.Split(s, ",")
 }
 
-func (s *ClusterService) DeleteCluster(ctx context.Context, name string) error {
-	defer WithTarget(name)()
+func (s *ClusterService) DeleteCluster(_ context.Context, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("cluster name required")
+	}
+	id, done := StartOp("cluster.delete", name)
+	go func() {
+		defer WithTarget(name)()
+		var err error
+		defer func() { done(err) }()
+		err = deleteClusterSync(name)
+	}()
+	return id, nil
+}
+
+func deleteClusterSync(name string) error {
+	ctx := context.Background()
 	c, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: name})
 	if err != nil {
 		return err
@@ -162,8 +193,22 @@ func (s *ClusterService) DeleteCluster(ctx context.Context, name string) error {
 	return k3dclient.ClusterDelete(ctx, GetRuntime(), c, k3d.ClusterDeleteOpts{SkipRegistryCheck: false})
 }
 
-func (s *ClusterService) StartCluster(ctx context.Context, name string) error {
-	defer WithTarget(name)()
+func (s *ClusterService) StartCluster(_ context.Context, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("cluster name required")
+	}
+	id, done := StartOp("cluster.start", name)
+	go func() {
+		defer WithTarget(name)()
+		var err error
+		defer func() { done(err) }()
+		err = startClusterSync(name)
+	}()
+	return id, nil
+}
+
+func startClusterSync(name string) error {
+	ctx := context.Background()
 	rt := GetRuntime()
 
 	slog.Info("starting cluster", "cluster", name)
@@ -220,19 +265,29 @@ func (s *ClusterService) StartCluster(ctx context.Context, name string) error {
 	}
 
 	slog.Debug("starting agent nodes", "cluster", name)
-	// Start agent nodes (and any remaining aux nodes like load-balancer) via the normal path.
 	return k3dclient.ClusterStart(ctx, rt, c, k3d.ClusterStartOpts{
 		EnvironmentInfo: envInfo,
 	})
 }
 
-func (s *ClusterService) StopCluster(ctx context.Context, name string) error {
-	defer WithTarget(name)()
-	c, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: name})
-	if err != nil {
-		return err
+func (s *ClusterService) StopCluster(_ context.Context, name string) (string, error) {
+	if name == "" {
+		return "", fmt.Errorf("cluster name required")
 	}
-	return k3dclient.ClusterStop(ctx, GetRuntime(), c)
+	id, done := StartOp("cluster.stop", name)
+	go func() {
+		defer WithTarget(name)()
+		var err error
+		defer func() { done(err) }()
+		ctx := context.Background()
+		c, getErr := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: name})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		err = k3dclient.ClusterStop(ctx, GetRuntime(), c)
+	}()
+	return id, nil
 }
 
 func clusterToDTO(c *k3d.Cluster) dto.ClusterDTO {

@@ -19,6 +19,9 @@ declare module "@wailsio/runtime" {
             "cluster:error": string;
             "cluster:ready": string;
             "log:entry": dto$0.LogEntryDTO;
+            "op:done": dto$0.OperationEventDTO;
+            "op:error": dto$0.OperationEventDTO;
+            "op:start": dto$0.OperationEventDTO;
         }
     }
 }

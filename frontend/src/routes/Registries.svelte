@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { RegistryService } from "../../bindings/github.com/k3desktop/k3desktop/service";
   import { RegistryDTO, RegistryCreateRequest } from "../../bindings/github.com/k3desktop/k3desktop/dto";
+  import { operations, dismiss as dismissOp } from "../lib/operationsStore";
+  import type { OperationState } from "../lib/operationsStore";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
 
   let registries: RegistryDTO[] = $state([]);
@@ -9,6 +11,20 @@
   let error = $state("");
   let showCreate = $state(false);
   let form = $state({ name: "", port: 0 });
+
+  let registryOps: Map<string, OperationState> = $state(new Map());
+  const unsubOps = operations.subscribe((m) => {
+    const next = new Map<string, OperationState>();
+    for (const op of m.values()) {
+      if (op.kind.startsWith("registry.")) next.set(op.target, op);
+    }
+    registryOps = next;
+  });
+  onDestroy(unsubOps);
+
+  function opFor(name: string): OperationState | undefined {
+    return registryOps.get(name);
+  }
 
   async function load() {
     loading = true;
@@ -28,7 +44,6 @@
       await RegistryService.CreateRegistry(new RegistryCreateRequest(form));
       showCreate = false;
       form = { name: "", port: 0 };
-      await load();
     } catch (e: any) {
       error = String(e);
     }
@@ -38,11 +53,27 @@
     if (!confirm(`Delete registry "${name}"?`)) return;
     try {
       await RegistryService.DeleteRegistry(name);
-      await load();
     } catch (e: any) {
       error = String(e);
     }
   }
+
+  // Refresh whenever any registry op transitions out of "start".
+  let lastSeenIds = new Set<string>();
+  const unsubRefresh = operations.subscribe((m) => {
+    const stillActive = new Set<string>();
+    for (const op of m.values()) {
+      if (op.kind.startsWith("registry.")) stillActive.add(op.id);
+    }
+    let shouldReload = false;
+    for (const id of lastSeenIds) if (!stillActive.has(id)) shouldReload = true;
+    for (const op of m.values()) {
+      if (op.kind.startsWith("registry.") && (op.phase === "done" || op.phase === "error") && !lastSeenIds.has(op.id)) shouldReload = true;
+    }
+    lastSeenIds = stillActive;
+    if (shouldReload) load();
+  });
+  onDestroy(unsubRefresh);
 
   onMount(load);
 </script>
@@ -57,6 +88,17 @@
 
   <ErrorAlert bind:message={error} />
 
+  {#each Array.from(registryOps.values()).filter(o => o.kind === "registry.create" && !registries.some(r => r.name === o.target)) as op (op.id)}
+    {#if op.phase === "start"}
+      <div class="mb-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm animate-pulse">Creating registry <span class="font-medium">{op.target}</span>…</div>
+    {:else if op.phase === "error"}
+      <div class="mb-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm flex items-start justify-between gap-3">
+        <div>Creating <span class="font-medium">{op.target}</span> failed — {op.error}</div>
+        <button onclick={() => dismissOp(op.kind, op.target)} class="hover:underline shrink-0">Dismiss</button>
+      </div>
+    {/if}
+  {/each}
+
   {#if loading}
     <div class="text-sm text-gray-400 dark:text-gray-500">Loading…</div>
   {:else if registries.length === 0}
@@ -64,17 +106,31 @@
   {:else}
     <div class="grid gap-3">
       {#each registries as r}
-        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex items-center gap-4">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="font-medium text-gray-900 dark:text-gray-100">{r.name}</span>
-              <span class="px-2 py-0.5 rounded-full text-xs font-medium {r.state === 'running' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}">
-                {r.state}
-              </span>
+        {@const op = opFor(r.name)}
+        {@const busy = op?.phase === "start"}
+        {@const errOp = op?.phase === "error" ? op : undefined}
+        <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+          <div class="flex items-center gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-medium text-gray-900 dark:text-gray-100">{r.name}</span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium {r.state === 'running' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}">
+                  {r.state}
+                </span>
+                {#if busy}
+                  <span class="text-xs text-gray-400 dark:text-gray-500 animate-pulse">{op?.kind === "registry.delete" ? "Deleting…" : "Working…"}</span>
+                {/if}
+              </div>
+              <div class="mt-1 font-mono text-sm text-gray-500 dark:text-gray-400">{r.protocol}://{r.host}{r.port ? `:${r.port}` : ""}</div>
             </div>
-            <div class="mt-1 font-mono text-sm text-gray-500 dark:text-gray-400">{r.protocol}://{r.host}{r.port ? `:${r.port}` : ""}</div>
+            <button onclick={() => del(r.name)} disabled={busy} class="px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors">Delete</button>
           </div>
-          <button onclick={() => del(r.name)} class="px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Delete</button>
+          {#if errOp}
+            <div class="mt-3 p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs flex items-start justify-between gap-3">
+              <div>{errOp.error ?? "operation failed"}</div>
+              <button onclick={() => dismissOp(errOp.kind, errOp.target)} class="hover:underline shrink-0">Dismiss</button>
+            </div>
+          {/if}
         </div>
       {/each}
     </div>

@@ -14,7 +14,13 @@ import (
 type KubeconfigService struct{}
 
 // ExportKubeconfig merges cluster kubeconfig into ~/.kube/config and returns the path.
-func (s *KubeconfigService) ExportKubeconfig(ctx context.Context, clusterName string) (string, error) {
+// Kept synchronous because the frontend needs the returned path; wrapped with StartOp
+// so the operations store reflects in-flight state.
+func (s *KubeconfigService) ExportKubeconfig(ctx context.Context, clusterName string) (path string, retErr error) {
+	defer WithTarget(clusterName)()
+	_, done := StartOp("kubeconfig.export", clusterName)
+	defer func() { done(retErr) }()
+
 	c, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: clusterName})
 	if err != nil {
 		return "", err
@@ -76,7 +82,10 @@ func (s *KubeconfigService) ListContexts() ([]dto.KubeconfigContextDTO, error) {
 }
 
 // SetCurrentContext sets the active context in ~/.kube/config.
-func (s *KubeconfigService) SetCurrentContext(contextName string) error {
+func (s *KubeconfigService) SetCurrentContext(contextName string) (retErr error) {
+	defer WithTarget(contextName)()
+	_, done := StartOp("kubeconfig.setContext", contextName)
+	defer func() { done(retErr) }()
 	path, err := k3dclient.KubeconfigGetDefaultPath()
 	if err != nil {
 		return err
@@ -90,7 +99,10 @@ func (s *KubeconfigService) SetCurrentContext(contextName string) error {
 }
 
 // DeleteContext removes a context (and its cluster/user if exclusive) from ~/.kube/config.
-func (s *KubeconfigService) DeleteContext(contextName string) error {
+func (s *KubeconfigService) DeleteContext(contextName string) (retErr error) {
+	defer WithTarget(contextName)()
+	_, done := StartOp("kubeconfig.deleteContext", contextName)
+	defer func() { done(retErr) }()
 	path, err := k3dclient.KubeconfigGetDefaultPath()
 	if err != nil {
 		return err

@@ -16,6 +16,7 @@ export {
     LogEntryDTO,
     NodeDTO,
     NodeFilter,
+    OperationEventDTO,
     ProfileDTO,
     RegistryCreateRequest,
     RegistryDTO,

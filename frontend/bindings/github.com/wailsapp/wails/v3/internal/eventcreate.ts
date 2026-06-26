@@ -16,11 +16,15 @@ function configure() {
         "blueprint:done": $$createType0,
         "blueprint:error": $$createType0,
         "log:entry": $$createType1,
+        "op:done": $$createType2,
+        "op:error": $$createType2,
+        "op:start": $$createType2,
     }));
 }
 
 // Private type creation functions
 const $$createType0 = dto$0.BlueprintEventDTO.createFrom;
 const $$createType1 = dto$0.LogEntryDTO.createFrom;
+const $$createType2 = dto$0.OperationEventDTO.createFrom;
 
 configure();

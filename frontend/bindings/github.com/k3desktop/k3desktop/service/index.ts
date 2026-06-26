@@ -6,6 +6,7 @@ import * as ClusterService from "./clusterservice.js";
 import * as KubeconfigService from "./kubeconfigservice.js";
 import * as LogService from "./logservice.js";
 import * as NodeService from "./nodeservice.js";
+import * as OperationsService from "./operationsservice.js";
 import * as ProfileService from "./profileservice.js";
 import * as RegistryService from "./registryservice.js";
 import * as VersionService from "./versionservice.js";
@@ -15,6 +16,7 @@ export {
     KubeconfigService,
     LogService,
     NodeService,
+    OperationsService,
     ProfileService,
     RegistryService,
     VersionService

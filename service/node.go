@@ -39,8 +39,22 @@ func (s *NodeService) ListNodes(ctx context.Context, clusterName string) ([]dto.
 	return result, nil
 }
 
-func (s *NodeService) AddAgent(ctx context.Context, clusterName string) error {
-	defer WithTarget(clusterName)()
+func (s *NodeService) AddAgent(_ context.Context, clusterName string) (string, error) {
+	if clusterName == "" {
+		return "", fmt.Errorf("cluster name required")
+	}
+	id, done := StartOp("node.add", clusterName)
+	go func() {
+		defer WithTarget(clusterName)()
+		var err error
+		defer func() { done(err) }()
+		err = addAgentSync(clusterName)
+	}()
+	return id, nil
+}
+
+func addAgentSync(clusterName string) error {
+	ctx := context.Background()
 	c, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: clusterName})
 	if err != nil {
 		return err
@@ -60,61 +74,123 @@ func (s *NodeService) AddAgent(ctx context.Context, clusterName string) error {
 	return k3dclient.NodeAddToCluster(ctx, GetRuntime(), node, c, k3d.NodeCreateOpts{})
 }
 
-func (s *NodeService) DeleteNode(ctx context.Context, nodeName string) error {
-	defer WithTarget(nodeName)()
-	node, err := k3dclient.NodeGet(ctx, GetRuntime(), &k3d.Node{Name: nodeName})
-	if err != nil {
-		return err
+func (s *NodeService) DeleteNode(_ context.Context, nodeName string) (string, error) {
+	if nodeName == "" {
+		return "", fmt.Errorf("node name required")
 	}
-	if node.Role == k3d.ServerRole {
-		return fmt.Errorf("cannot delete server node; use DeleteCluster")
-	}
-	return k3dclient.NodeDelete(ctx, GetRuntime(), node, k3d.NodeDeleteOpts{})
+	id, done := StartOp("node.delete", nodeName)
+	go func() {
+		defer WithTarget(nodeName)()
+		var err error
+		defer func() { done(err) }()
+		ctx := context.Background()
+		node, getErr := k3dclient.NodeGet(ctx, GetRuntime(), &k3d.Node{Name: nodeName})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		if node.Role == k3d.ServerRole {
+			err = fmt.Errorf("cannot delete server node; use DeleteCluster")
+			return
+		}
+		err = k3dclient.NodeDelete(ctx, GetRuntime(), node, k3d.NodeDeleteOpts{})
+	}()
+	return id, nil
 }
 
-func (s *NodeService) StartNode(ctx context.Context, nodeName string) error {
-	defer WithTarget(nodeName)()
-	node, err := k3dclient.NodeGet(ctx, GetRuntime(), &k3d.Node{Name: nodeName})
-	if err != nil {
-		return err
+func (s *NodeService) StartNode(_ context.Context, nodeName string) (string, error) {
+	if nodeName == "" {
+		return "", fmt.Errorf("node name required")
 	}
-	cluster, err := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: node.RuntimeLabels[k3d.LabelClusterName]})
-	if err != nil {
-		return err
-	}
-	envInfo, err := k3dclient.GatherEnvironmentInfo(ctx, GetRuntime(), cluster)
-	if err != nil {
-		return fmt.Errorf("gather environment info: %w", err)
-	}
-	return k3dclient.NodeStart(ctx, GetRuntime(), node, &k3d.NodeStartOpts{
-		EnvironmentInfo: envInfo,
-	})
+	id, done := StartOp("node.start", nodeName)
+	go func() {
+		defer WithTarget(nodeName)()
+		var err error
+		defer func() { done(err) }()
+		ctx := context.Background()
+		node, getErr := k3dclient.NodeGet(ctx, GetRuntime(), &k3d.Node{Name: nodeName})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		cluster, getErr := k3dclient.ClusterGet(ctx, GetRuntime(), &k3d.Cluster{Name: node.RuntimeLabels[k3d.LabelClusterName]})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		envInfo, envErr := k3dclient.GatherEnvironmentInfo(ctx, GetRuntime(), cluster)
+		if envErr != nil {
+			err = fmt.Errorf("gather environment info: %w", envErr)
+			return
+		}
+		err = k3dclient.NodeStart(ctx, GetRuntime(), node, &k3d.NodeStartOpts{
+			EnvironmentInfo: envInfo,
+		})
+	}()
+	return id, nil
 }
 
-func (s *NodeService) StopNode(ctx context.Context, nodeName string) error {
-	defer WithTarget(nodeName)()
-	node, err := k3dclient.NodeGet(ctx, GetRuntime(), &k3d.Node{Name: nodeName})
-	if err != nil {
-		return err
+func (s *NodeService) StopNode(_ context.Context, nodeName string) (string, error) {
+	if nodeName == "" {
+		return "", fmt.Errorf("node name required")
 	}
-	return GetRuntime().StopNode(ctx, node)
+	id, done := StartOp("node.stop", nodeName)
+	go func() {
+		defer WithTarget(nodeName)()
+		var err error
+		defer func() { done(err) }()
+		ctx := context.Background()
+		node, getErr := k3dclient.NodeGet(ctx, GetRuntime(), &k3d.Node{Name: nodeName})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		err = GetRuntime().StopNode(ctx, node)
+	}()
+	return id, nil
 }
 
-func (s *NodeService) RestartNode(ctx context.Context, nodeName string) error {
-	defer WithTarget(nodeName)()
-	rt := GetRuntime()
-	node, err := k3dclient.NodeGet(ctx, rt, &k3d.Node{Name: nodeName})
-	if err != nil {
-		return err
+func (s *NodeService) RestartNode(_ context.Context, nodeName string) (string, error) {
+	if nodeName == "" {
+		return "", fmt.Errorf("node name required")
 	}
-	if err := rt.StopNode(ctx, node); err != nil {
-		return err
-	}
-	return rt.StartNode(ctx, node)
+	id, done := StartOp("node.restart", nodeName)
+	go func() {
+		defer WithTarget(nodeName)()
+		var err error
+		defer func() { done(err) }()
+		ctx := context.Background()
+		rt := GetRuntime()
+		node, getErr := k3dclient.NodeGet(ctx, rt, &k3d.Node{Name: nodeName})
+		if getErr != nil {
+			err = getErr
+			return
+		}
+		if stopErr := rt.StopNode(ctx, node); stopErr != nil {
+			err = stopErr
+			return
+		}
+		err = rt.StartNode(ctx, node)
+	}()
+	return id, nil
 }
 
-func (s *NodeService) UpgradeNode(ctx context.Context, nodeName, image string) error {
-	defer WithTarget(nodeName)()
+func (s *NodeService) UpgradeNode(_ context.Context, nodeName, image string) (string, error) {
+	if nodeName == "" {
+		return "", fmt.Errorf("node name required")
+	}
+	id, done := StartOp("node.upgrade", nodeName)
+	go func() {
+		defer WithTarget(nodeName)()
+		var err error
+		defer func() { done(err) }()
+		err = upgradeNodeSync(nodeName, image)
+	}()
+	return id, nil
+}
+
+func upgradeNodeSync(nodeName, image string) error {
+	ctx := context.Background()
 	rt := GetRuntime()
 
 	oldNode, err := k3dclient.NodeGet(ctx, rt, &k3d.Node{Name: nodeName})

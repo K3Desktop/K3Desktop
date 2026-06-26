@@ -1,26 +1,50 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { ClusterService, NodeService, VersionService } from "../../bindings/github.com/k3desktop/k3desktop/service";
   import { ClusterDTO, NodeDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
   import OpLog from "../lib/OpLog.svelte";
   import { clearOpLog } from "../lib/logStore";
+  import { operations, dismiss as dismissOp } from "../lib/operationsStore";
+  import type { OperationState } from "../lib/operationsStore";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
 
   let clusters: ClusterDTO[] = $state([]);
   let selected = $state("");
   let nodes: NodeDTO[] = $state([]);
   let loading = $state(false);
-  let addingAgent = $state(false);
-  let busy: Record<string, boolean> = $state({});
   let visibleLogs: Record<string, boolean> = $state({}); // node names with log panel open
   let error = $state("");
+
+  // Per-node and per-cluster operation state from the shared store (survives navigation).
+  let nodeOps: Map<string, OperationState> = $state(new Map());
+  let addAgentOp: OperationState | null = $state(null);
+  const unsubOps = operations.subscribe((m) => {
+    const next = new Map<string, OperationState>();
+    let add: OperationState | null = null;
+    for (const op of m.values()) {
+      if (op.kind === "node.add" && op.target === selected) {
+        add = op;
+      } else if (op.kind.startsWith("node.")) {
+        next.set(op.target, op);
+      }
+    }
+    nodeOps = next;
+    addAgentOp = add;
+  });
+  onDestroy(unsubOps);
+
+  function opFor(name: string): OperationState | undefined {
+    return nodeOps.get(name);
+  }
+  function isBusy(name: string): boolean {
+    return opFor(name)?.phase === "start";
+  }
 
   // Upgrade modal state
   let upgradeModalNode: NodeDTO | null = $state(null);
   let upgradeImage = $state("");
   let k3sVersions: string[] = $state([]);
   let loadingVersions = $state(false);
-  let upgrading = $state(false);
   let versionDropdownOpen = $state(false);
 
   async function loadClusters() {
@@ -50,36 +74,27 @@
 
   async function addAgent() {
     if (!selected) return;
-    addingAgent = true;
     visibleLogs["__adding_agent__"] = true;
     clearOpLog(selected);
     try {
       await NodeService.AddAgent(selected);
-      await loadNodes();
     } catch (e: any) {
       error = String(e);
-    } finally {
-      addingAgent = false;
     }
   }
 
   async function del(name: string) {
     if (!confirm(`Delete node "${name}"?`)) return;
-    busy[name] = true;
     visibleLogs[name] = true;
     clearOpLog(name);
     try {
       await NodeService.DeleteNode(name);
-      await loadNodes();
     } catch (e: any) {
       error = String(e);
-    } finally {
-      delete busy[name];
     }
   }
 
   async function toggleNode(n: NodeDTO) {
-    busy[n.name] = true;
     visibleLogs[n.name] = true;
     clearOpLog(n.name);
     try {
@@ -88,25 +103,18 @@
       } else {
         await NodeService.StartNode(n.name);
       }
-      await loadNodes();
     } catch (e: any) {
       error = String(e);
-    } finally {
-      delete busy[n.name];
     }
   }
 
   async function restartNode(n: NodeDTO) {
-    busy[n.name] = true;
     visibleLogs[n.name] = true;
     clearOpLog(n.name);
     try {
       await NodeService.RestartNode(n.name);
-      await loadNodes();
     } catch (e: any) {
       error = String(e);
-    } finally {
-      delete busy[n.name];
     }
   }
 
@@ -137,19 +145,12 @@
     const node = upgradeModalNode;
     const image = `rancher/k3s:${upgradeImage}`;
     closeUpgradeModal();
-    busy[node.name] = true;
     visibleLogs[node.name] = true;
-    upgrading = true;
     clearOpLog(node.name);
     try {
       await NodeService.UpgradeNode(node.name, image);
-      // Reload in a fresh async tick so Docker has settled after the upgrade.
-      setTimeout(() => loadNodes(), 500);
     } catch (e: any) {
       error = String(e);
-    } finally {
-      delete busy[node.name];
-      upgrading = false;
     }
   }
 
@@ -165,6 +166,30 @@
     if (m) return `sha256:${m[1].slice(0, 12)}…`;
     return image;
   }
+
+  // Auto-refresh the node list whenever a node/cluster op transitions out of "start".
+  let lastSeenIds = new Set<string>();
+  const unsubRefresh = operations.subscribe((m) => {
+    const stillActive = new Set<string>();
+    for (const op of m.values()) {
+      if (op.kind.startsWith("node.")) stillActive.add(op.id);
+    }
+    let shouldReload = false;
+    for (const id of lastSeenIds) {
+      if (!stillActive.has(id)) shouldReload = true;
+    }
+    for (const op of m.values()) {
+      if (op.kind.startsWith("node.") && (op.phase === "done" || op.phase === "error") && !lastSeenIds.has(op.id)) {
+        shouldReload = true;
+      }
+    }
+    lastSeenIds = stillActive;
+    if (shouldReload && selected) {
+      // small delay so Docker state settles, especially after node.upgrade
+      setTimeout(() => loadNodes(), 500);
+    }
+  });
+  onDestroy(unsubRefresh);
 
   onMount(loadClusters);
 </script>
@@ -186,6 +211,7 @@
       {/if}
     </div>
     {#if selected}
+      {@const addingAgent = addAgentOp?.phase === "start"}
       <button
         onclick={addAgent}
         disabled={addingAgent}
@@ -198,8 +224,15 @@
 
   <ErrorAlert bind:message={error} />
 
-  {#if visibleLogs["__adding_agent__"]}
-    <OpLog active={addingAgent} target={selected} onclose={() => { delete visibleLogs["__adding_agent__"]; }} />
+  {#if addAgentOp?.phase === "error"}
+    <div class="mb-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm flex items-start justify-between gap-3">
+      <div>Adding agent to <span class="font-medium">{addAgentOp.target}</span> failed — {addAgentOp.error}</div>
+      <button onclick={() => dismissOp(addAgentOp!.kind, addAgentOp!.target)} class="hover:underline shrink-0">Dismiss</button>
+    </div>
+  {/if}
+
+  {#if visibleLogs["__adding_agent__"] && selected}
+    <OpLog active={addAgentOp?.phase === "start"} target={selected} onclose={() => { delete visibleLogs["__adding_agent__"]; }} />
   {/if}
 
   {#if loading}
@@ -220,15 +253,16 @@
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
           {#each nodes as n (n.name)}
-            {@const isBusy = !!busy[n.name]}
+            {@const op = opFor(n.name)}
+            {@const busy = op?.phase === "start"}
+            {@const errOp = op?.phase === "error" ? op : undefined}
+            {@const busyLabel = busy ? (op?.kind === "node.stop" ? "stopping…" : op?.kind === "node.start" ? "starting…" : op?.kind === "node.restart" ? "restarting…" : op?.kind === "node.upgrade" ? "upgrading…" : op?.kind === "node.delete" ? "deleting…" : "working…") : ""}
             <tr class="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750">
               <td class="px-4 py-3 font-mono text-gray-900 dark:text-gray-100">{n.name}</td>
               <td class="px-4 py-3 text-gray-600 dark:text-gray-400 capitalize">{n.role}</td>
               <td class="px-4 py-3">
-                {#if isBusy}
-                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 animate-pulse">
-                    {n.state === "running" ? "stopping…" : "starting…"}
-                  </span>
+                {#if busy}
+                  <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 animate-pulse">{busyLabel}</span>
                 {:else}
                   <span class="px-2 py-0.5 rounded-full text-xs font-medium {n.state === 'running' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}">
                     {n.state}
@@ -240,7 +274,7 @@
                 <div class="flex items-center gap-2 justify-end">
                   <button
                     onclick={() => toggleNode(n)}
-                    disabled={isBusy}
+                    disabled={busy}
                     class="px-2.5 py-1 rounded text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {n.state === "running" ? "Stop" : "Start"}
@@ -248,7 +282,7 @@
                   {#if n.state === "running"}
                     <button
                       onclick={() => restartNode(n)}
-                      disabled={isBusy}
+                      disabled={busy}
                       class="px-2.5 py-1 rounded text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       Restart
@@ -257,7 +291,7 @@
                   {#if n.role === "agent"}
                   <button
                     onclick={() => openUpgradeModal(n)}
-                    disabled={isBusy}
+                    disabled={busy}
                     class="px-2.5 py-1 rounded text-xs border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Upgrade
@@ -266,17 +300,27 @@
                   {#if n.role === "agent"}
                     <button
                       onclick={() => del(n.name)}
-                      disabled={isBusy}
+                      disabled={busy}
                       class="px-2.5 py-1 rounded text-xs border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >Delete</button>
                   {/if}
                 </div>
               </td>
             </tr>
+            {#if errOp}
+              <tr class="bg-white dark:bg-gray-800">
+                <td colspan="5" class="px-4 pb-2">
+                  <div class="p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs flex items-start justify-between gap-3">
+                    <div>{errOp.error ?? "operation failed"}</div>
+                    <button onclick={() => dismissOp(errOp.kind, errOp.target)} class="hover:underline shrink-0">Dismiss</button>
+                  </div>
+                </td>
+              </tr>
+            {/if}
             {#if visibleLogs[n.name]}
               <tr class="bg-white dark:bg-gray-800">
                 <td colspan="5" class="px-4 pb-3">
-                  <OpLog active={isBusy} target={n.name} onclose={() => { delete visibleLogs[n.name]; }} />
+                  <OpLog active={busy} target={n.name} onclose={() => { delete visibleLogs[n.name]; }} />
                 </td>
               </tr>
             {/if}
@@ -339,7 +383,7 @@
         </button>
         <button
           onclick={confirmUpgrade}
-          disabled={!upgradeImage || loadingVersions}
+          disabled={!upgradeImage || loadingVersions || (upgradeModalNode ? isBusy(upgradeModalNode.name) : false)}
           class="px-4 py-2 rounded-lg bg-brand text-gray-900 text-sm font-semibold hover:bg-brand-dim disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Upgrade

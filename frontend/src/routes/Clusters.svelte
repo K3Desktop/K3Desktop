@@ -1,12 +1,13 @@
 <script lang="ts">
-  import { onMount } from "svelte";
-  import { Events } from "@wailsio/runtime";
+  import { onMount, onDestroy } from "svelte";
   import { ClusterService, VersionService, ProfileService } from "../../bindings/github.com/k3desktop/k3desktop/service";
   import { ClusterCreateRequest, ClusterCreateAdvancedRequest, NodeFilter, UlimitDTO, FileDTO, HostAliasDTO, ClusterDTO, ProfileDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
   import ClusterForm from "../lib/ClusterForm.svelte";
   import OpLog from "../lib/OpLog.svelte";
   import { clusterFormPrefill, defaultAdv, advToDto, dtoToAdv } from "../lib/prefill";
   import { clearOpLog } from "../lib/logStore";
+  import { operations, dismiss as dismissOp } from "../lib/operationsStore";
+  import type { OperationState } from "../lib/operationsStore";
   import type { AdvState } from "../lib/prefill";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
 
@@ -15,10 +16,34 @@
   let error = $state("");
   let showCreate = $state(false);
   let showAdvanced = $state(false);
-  let creating = $state(false);
-  let creatingName = $state("");
-  let busy: Record<string, boolean> = $state({});
   let visibleLogs: Record<string, boolean> = $state({}); // names with log panel open
+
+  // Derived from the global store — survives navigation.
+  let clusterOps: Map<string, OperationState> = $state(new Map());
+  let creatingOps: OperationState[] = $state([]);
+  const unsubOps = operations.subscribe((m) => {
+    const next = new Map<string, OperationState>();
+    const creates: OperationState[] = [];
+    for (const op of m.values()) {
+      if (!op.kind.startsWith("cluster.")) continue;
+      next.set(op.target, op);
+      if (op.kind === "cluster.create") creates.push(op);
+    }
+    clusterOps = next;
+    creatingOps = creates;
+  });
+  onDestroy(unsubOps);
+
+  function opFor(name: string): OperationState | undefined {
+    return clusterOps.get(name);
+  }
+  function isBusy(name: string): boolean {
+    return opFor(name)?.phase === "start";
+  }
+  function errorFor(name: string): OperationState | undefined {
+    const op = opFor(name);
+    return op?.phase === "error" ? op : undefined;
+  }
 
   let k3sVersions: string[] = $state([]);
   let versionsLoading = $state(false);
@@ -84,51 +109,42 @@
 
   async function createSimple() {
     if (!simple.name) return;
-    creating = true;
-    creatingName = simple.name;
     clearOpLog(simple.name);
+    visibleLogs[simple.name] = true;
     showCreate = false;
     try {
       await ClusterService.CreateCluster(new ClusterCreateRequest(simple));
       simple = { name: "", servers: 1, agents: 0, image: "", apiPort: "" };
     } catch (e: any) {
       error = String(e);
-      creating = false;
     }
   }
 
   async function createAdvanced() {
     if (!adv.name) return;
-    creating = true;
-    creatingName = adv.name;
     clearOpLog(adv.name);
+    visibleLogs[adv.name] = true;
     showAdvanced = false;
     try {
       const dto = advToDto(adv);
       await ClusterService.CreateClusterAdvanced(new ClusterCreateAdvancedRequest(dto));
     } catch (e: any) {
       error = String(e);
-      creating = false;
     }
   }
 
   async function del(name: string) {
     if (!confirm(`Delete cluster "${name}"?`)) return;
-    busy[name] = true;
     visibleLogs[name] = true;
     clearOpLog(name);
     try {
       await ClusterService.DeleteCluster(name);
-      await silentLoad();
     } catch (e: any) {
       error = String(e);
-    } finally {
-      delete busy[name];
     }
   }
 
   async function toggle(cluster: ClusterDTO) {
-    busy[cluster.name] = true;
     visibleLogs[cluster.name] = true;
     clearOpLog(cluster.name);
     try {
@@ -137,20 +153,36 @@
       } else {
         await ClusterService.StartCluster(cluster.name);
       }
-      await silentLoad();
     } catch (e: any) {
       error = String(e);
-    } finally {
-      delete busy[cluster.name];
     }
   }
+
+  // Whenever any cluster operation finishes, refresh the list. Survives navigation.
+  let lastSeenIds = new Set<string>();
+  const unsubRefresh = operations.subscribe((m) => {
+    const stillActive = new Set<string>();
+    for (const op of m.values()) {
+      if (op.kind.startsWith("cluster.")) stillActive.add(op.id);
+    }
+    // Detect ops that disappeared or transitioned out of "start" since last tick.
+    let shouldReload = false;
+    for (const id of lastSeenIds) {
+      if (!stillActive.has(id)) shouldReload = true;
+    }
+    for (const op of m.values()) {
+      if (op.kind.startsWith("cluster.") && (op.phase === "done" || op.phase === "error") && !lastSeenIds.has(op.id)) {
+        shouldReload = true;
+      }
+    }
+    lastSeenIds = stillActive;
+    if (shouldReload) silentLoad();
+  });
+  onDestroy(unsubRefresh);
 
   onMount(() => {
     load();
     loadProfiles();
-    Events.On("cluster:creating", () => { creating = true; });
-    Events.On("cluster:ready", () => { creating = false; silentLoad(); });
-    Events.On("cluster:error", (ev: any) => { creating = false; error = ev.data; });
 
     // Check for profile-prefilled form state
     const unsub = clusterFormPrefill.subscribe((prefill) => {
@@ -206,10 +238,17 @@
 
   <ErrorAlert bind:message={error} />
 
-  {#if creating}
-    <div class="mb-4 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm animate-pulse">Creating cluster…</div>
-    <OpLog active={creating} target={creatingName} onclose={() => {}} />
-  {/if}
+  {#each creatingOps as op (op.id)}
+    {#if op.phase === "start"}
+      <div class="mb-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm animate-pulse">Creating cluster <span class="font-medium">{op.target}</span>…</div>
+      <OpLog active={true} target={op.target} onclose={() => {}} />
+    {:else if op.phase === "error"}
+      <div class="mb-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm flex items-start justify-between gap-3">
+        <div><span class="font-medium">{op.target}</span> — {op.error ?? "creation failed"}</div>
+        <button onclick={() => dismissOp(op.kind, op.target)} class="text-red-700 dark:text-red-300 hover:underline shrink-0">Dismiss</button>
+      </div>
+    {/if}
+  {/each}
 
   {#if loading}
     <div class="text-sm text-gray-400 dark:text-gray-500">Loading…</div>
@@ -218,7 +257,10 @@
   {:else}
     <div class="grid gap-4">
       {#each clusters as c (c.name)}
-        {@const isBusy = !!busy[c.name]}
+        {@const op = opFor(c.name)}
+        {@const busy = op?.phase === "start"}
+        {@const errOp = op?.phase === "error" ? op : undefined}
+        {@const busyLabel = busy ? (op?.kind === "cluster.stop" ? "Stopping…" : op?.kind === "cluster.delete" ? "Deleting…" : op?.kind === "cluster.start" ? "Starting…" : "Working…") : ""}
         <div class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
           <div class="flex items-center gap-4">
             <div class="flex-1 min-w-0">
@@ -227,10 +269,8 @@
                 <span class="px-2 py-0.5 rounded-full text-xs font-medium {c.status === 'running' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : c.status === 'partial' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'}">
                   {c.status}
                 </span>
-                {#if isBusy}
-                  <span class="text-xs text-gray-400 dark:text-gray-500 animate-pulse">
-                    {c.status === "running" ? "Stopping…" : "Starting…"}
-                  </span>
+                {#if busy}
+                  <span class="text-xs text-gray-400 dark:text-gray-500 animate-pulse">{busyLabel}</span>
                 {/if}
               </div>
               <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -240,22 +280,28 @@
             <div class="flex items-center gap-2">
               <button
                 onclick={() => toggle(c)}
-                disabled={isBusy}
+                disabled={busy}
                 class="px-3 py-1.5 rounded-lg text-xs font-medium border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {c.status === "running" ? "Stop" : "Start"}
               </button>
               <button
                 onclick={() => del(c.name)}
-                disabled={isBusy}
+                disabled={busy}
                 class="px-3 py-1.5 rounded-lg text-xs font-medium border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Delete
               </button>
             </div>
           </div>
+          {#if errOp}
+            <div class="mt-3 p-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-xs flex items-start justify-between gap-3">
+              <div>{errOp.error ?? "operation failed"}</div>
+              <button onclick={() => dismissOp(errOp.kind, errOp.target)} class="hover:underline shrink-0">Dismiss</button>
+            </div>
+          {/if}
           {#if visibleLogs[c.name]}
-            <OpLog active={isBusy} target={c.name} onclose={() => { delete visibleLogs[c.name]; }} />
+            <OpLog active={busy} target={c.name} onclose={() => { delete visibleLogs[c.name]; }} />
           {/if}
         </div>
       {/each}

@@ -28,6 +28,7 @@ func main() {
 			application.NewService(&service.ProfileService{}),
 			application.NewService(&service.LogService{}),
 			application.NewService(&service.BlueprintService{}),
+			application.NewService(&service.OperationsService{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

@@ -9,15 +9,15 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // @ts-ignore: Unused imports
 import * as dto$0 from "../dto/models.js";
 
-export function CreateCluster(req: dto$0.ClusterCreateRequest): $CancellablePromise<void> {
+export function CreateCluster(req: dto$0.ClusterCreateRequest): $CancellablePromise<string> {
     return $Call.ByID(1645023132, req);
 }
 
-export function CreateClusterAdvanced(req: dto$0.ClusterCreateAdvancedRequest): $CancellablePromise<void> {
+export function CreateClusterAdvanced(req: dto$0.ClusterCreateAdvancedRequest): $CancellablePromise<string> {
     return $Call.ByID(3268881462, req);
 }
 
-export function DeleteCluster(name: string): $CancellablePromise<void> {
+export function DeleteCluster(name: string): $CancellablePromise<string> {
     return $Call.ByID(2212415657, name);
 }
 
@@ -27,11 +27,11 @@ export function ListClusters(): $CancellablePromise<dto$0.ClusterDTO[]> {
     });
 }
 
-export function StartCluster(name: string): $CancellablePromise<void> {
+export function StartCluster(name: string): $CancellablePromise<string> {
     return $Call.ByID(372684744, name);
 }
 
-export function StopCluster(name: string): $CancellablePromise<void> {
+export function StopCluster(name: string): $CancellablePromise<string> {
     return $Call.ByID(3867105232, name);
 }
 
