@@ -5,12 +5,15 @@
   import { operations, dismiss as dismissOp } from "../lib/operationsStore";
   import type { OperationState } from "../lib/operationsStore";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
+  import ConfirmDialog from "../lib/ConfirmDialog.svelte";
 
   let registries: RegistryDTO[] = $state([]);
   let loading = $state(false);
   let error = $state("");
   let showCreate = $state(false);
   let form = $state({ name: "", port: 0 });
+  let confirmOpen = $state(false);
+  let pendingRegistry = $state<string | null>(null);
 
   let registryOps: Map<string, OperationState> = $state(new Map());
   const unsubOps = operations.subscribe((m) => {
@@ -49,8 +52,15 @@
     }
   }
 
-  async function del(name: string) {
-    if (!confirm(`Delete registry "${name}"?`)) return;
+  function del(name: string) {
+    pendingRegistry = name;
+    confirmOpen = true;
+  }
+
+  async function performDeleteRegistry() {
+    const name = pendingRegistry;
+    pendingRegistry = null;
+    if (!name) return;
     try {
       await RegistryService.DeleteRegistry(name);
     } catch (e: any) {
@@ -136,6 +146,16 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={confirmOpen}
+  title="Delete registry"
+  message={`Delete registry "${pendingRegistry ?? ""}"?`}
+  confirmLabel="Delete"
+  danger
+  onconfirm={performDeleteRegistry}
+  oncancel={() => { pendingRegistry = null; }}
+/>
 
 {#if showCreate}
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">

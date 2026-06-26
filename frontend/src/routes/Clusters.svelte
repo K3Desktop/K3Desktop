@@ -11,6 +11,7 @@
   import type { OperationState } from "../lib/operationsStore";
   import type { AdvState } from "../lib/prefill";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
+  import ConfirmDialog from "../lib/ConfirmDialog.svelte";
 
   let clusters: ClusterDTO[] = $state([]);
   let loading = $state(false);
@@ -18,6 +19,8 @@
   let showCreate = $state(false);
   let showAdvanced = $state(false);
   let visibleLogs: Record<string, boolean> = $state({}); // names with log panel open
+  let confirmOpen = $state(false);
+  let pendingDelete = $state<string | null>(null);
 
   // Derived from the global store — survives navigation.
   let clusterOps: Map<string, OperationState> = $state(new Map());
@@ -134,8 +137,15 @@
     }
   }
 
-  async function del(name: string) {
-    if (!confirm(`Delete cluster "${name}"?`)) return;
+  function del(name: string) {
+    pendingDelete = name;
+    confirmOpen = true;
+  }
+
+  async function performDelete() {
+    const name = pendingDelete;
+    pendingDelete = null;
+    if (!name) return;
     visibleLogs[name] = true;
     clearOpLog(name);
     try {
@@ -360,6 +370,16 @@
     </div>
   </div>
 {/if}
+
+<ConfirmDialog
+  bind:open={confirmOpen}
+  title="Delete cluster"
+  message={`Delete cluster "${pendingDelete ?? ""}"?`}
+  confirmLabel="Delete"
+  danger
+  onconfirm={performDelete}
+  oncancel={() => { pendingDelete = null; }}
+/>
 
 <!-- Advanced create page (full overlay) -->
 {#if showAdvanced}

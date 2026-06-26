@@ -4,6 +4,7 @@
   import { BlueprintService, ClusterService } from "../../bindings/github.com/k3desktop/k3desktop/service";
   import { BlueprintDTO, BlueprintDeployRequest, ChartEntryDTO, ClusterDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
+  import ConfirmDialog from "../lib/ConfirmDialog.svelte";
   import OpLog from "../lib/OpLog.svelte";
   import YamlEditor from "../lib/YamlEditor.svelte";
   import { clearOpLog } from "../lib/logStore";
@@ -30,6 +31,10 @@
   let deployCluster = $state("");
   let deployNamespace = $state("default");
   let deploying_ = $state(false);
+
+  // Delete confirm state
+  let confirmOpen = $state(false);
+  let pendingBlueprint = $state<BlueprintDTO | null>(null);
 
   async function load() {
     loading = true;
@@ -102,8 +107,15 @@
     }
   }
 
-  async function deleteBlueprint(bp: BlueprintDTO) {
-    if (!confirm(`Delete blueprint "${bp.name}"?`)) return;
+  function deleteBlueprint(bp: BlueprintDTO) {
+    pendingBlueprint = bp;
+    confirmOpen = true;
+  }
+
+  async function performDeleteBlueprint() {
+    const bp = pendingBlueprint;
+    pendingBlueprint = null;
+    if (!bp) return;
     busy[bp.name] = true;
     error = "";
     try {
@@ -295,6 +307,16 @@
     </div>
   </div>
 {/if}
+
+<ConfirmDialog
+  bind:open={confirmOpen}
+  title="Delete blueprint"
+  message={`Delete blueprint "${pendingBlueprint?.name ?? ""}"?`}
+  confirmLabel="Delete"
+  danger
+  onconfirm={performDeleteBlueprint}
+  oncancel={() => { pendingBlueprint = null; }}
+/>
 
 <!-- Blueprint editor overlay -->
 {#if showForm}

@@ -7,6 +7,7 @@
   import { operations, dismiss as dismissOp } from "../lib/operationsStore";
   import type { OperationState } from "../lib/operationsStore";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
+  import ConfirmDialog from "../lib/ConfirmDialog.svelte";
 
   let clusters: ClusterDTO[] = $state([]);
   let selected = $state("");
@@ -47,6 +48,10 @@
   let loadingVersions = $state(false);
   let versionDropdownOpen = $state(false);
 
+  // Delete confirm state
+  let confirmOpen = $state(false);
+  let pendingNode = $state<string | null>(null);
+
   async function loadClusters() {
     try {
       clusters = await ClusterService.ListClusters();
@@ -83,8 +88,15 @@
     }
   }
 
-  async function del(name: string) {
-    if (!confirm(`Delete node "${name}"?`)) return;
+  function del(name: string) {
+    pendingNode = name;
+    confirmOpen = true;
+  }
+
+  async function performDeleteNode() {
+    const name = pendingNode;
+    pendingNode = null;
+    if (!name) return;
     visibleLogs[name] = true;
     clearOpLog(name);
     try {
@@ -330,6 +342,16 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={confirmOpen}
+  title="Delete node"
+  message={`Delete node "${pendingNode ?? ""}"?`}
+  confirmLabel="Delete"
+  danger
+  onconfirm={performDeleteNode}
+  oncancel={() => { pendingNode = null; }}
+/>
 
 <!-- Upgrade modal -->
 {#if upgradeModalNode}

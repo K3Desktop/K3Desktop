@@ -6,12 +6,14 @@
   import type { OperationState } from "./operationsStore";
   import { clearOpLog } from "./logStore";
   import OpLog from "./OpLog.svelte";
+  import ConfirmDialog from "./ConfirmDialog.svelte";
 
   let { clusterName, clusterStatus }: { clusterName: string; clusterStatus: string } = $props();
 
   let lb: LoadBalancerDTO | null = $state(null);
   let loadError = $state("");
   let open = $state(false);
+  let confirmStopOpen = $state(false);
 
   let op = $state<OperationState | undefined>(undefined);
   const unsubOps = operations.subscribe((m) => {
@@ -55,8 +57,11 @@
     catch (e: any) { loadError = String(e); }
   }
 
-  async function stop() {
-    if (!confirm("Stopping the loadbalancer will break kubectl access to this cluster (it fronts the API server). The cluster itself keeps running.\n\nStop the loadbalancer?")) return;
+  function stop() {
+    confirmStopOpen = true;
+  }
+
+  async function performStop() {
     clearOpLog(clusterName);
     try { await ClusterService.StopLoadBalancer(clusterName); }
     catch (e: any) { loadError = String(e); }
@@ -68,6 +73,14 @@
     catch (e: any) { loadError = String(e); }
   }
 </script>
+
+<ConfirmDialog
+  bind:open={confirmStopOpen}
+  title="Stop load balancer"
+  message={"Stopping the loadbalancer will break kubectl access to this cluster (it fronts the API server). The cluster itself keeps running.\n\nStop the loadbalancer?"}
+  confirmLabel="Stop"
+  onconfirm={performStop}
+/>
 
 {#if lb}
   <div class="mt-3 rounded-lg border border-gray-200 dark:border-gray-700">

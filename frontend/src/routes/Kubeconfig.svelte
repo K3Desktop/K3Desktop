@@ -3,6 +3,7 @@
   import { ClusterService, KubeconfigService } from "../../bindings/github.com/k3desktop/k3desktop/service";
   import { ClusterDTO, KubeconfigContextDTO } from "../../bindings/github.com/k3desktop/k3desktop/dto";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
+  import ConfirmDialog from "../lib/ConfirmDialog.svelte";
 
   let contexts: KubeconfigContextDTO[] = $state([]);
   let clusters: ClusterDTO[] = $state([]);
@@ -14,6 +15,8 @@
   let exported = $state("");
   let error = $state("");
   let busyContext = $state("");
+  let confirmOpen = $state(false);
+  let pendingContext = $state<string | null>(null);
 
   async function loadContexts() {
     loadingContexts = true;
@@ -49,8 +52,15 @@
     }
   }
 
-  async function deleteContext(name: string) {
-    if (!confirm(`Delete context "${name}"?`)) return;
+  function deleteContext(name: string) {
+    pendingContext = name;
+    confirmOpen = true;
+  }
+
+  async function performDeleteContext() {
+    const name = pendingContext;
+    pendingContext = null;
+    if (!name) return;
     busyContext = name;
     error = "";
     try {
@@ -212,3 +222,13 @@
 
   </div>
 </div>
+
+<ConfirmDialog
+  bind:open={confirmOpen}
+  title="Delete context"
+  message={`Delete context "${pendingContext ?? ""}"?`}
+  confirmLabel="Delete"
+  danger
+  onconfirm={performDeleteContext}
+  oncancel={() => { pendingContext = null; }}
+/>

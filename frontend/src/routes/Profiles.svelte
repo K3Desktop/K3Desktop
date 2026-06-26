@@ -5,6 +5,7 @@
   import ClusterForm from "../lib/ClusterForm.svelte";
   import { clusterFormPrefill, defaultAdv, dtoToAdv, advToDto } from "../lib/prefill";
   import ErrorAlert from "../lib/ErrorAlert.svelte";
+  import ConfirmDialog from "../lib/ConfirmDialog.svelte";
   import type { AdvState } from "../lib/prefill";
 
   let { onNavigateToClusters }: { onNavigateToClusters: () => void } = $props();
@@ -22,6 +23,10 @@
 
   let k3sVersions: string[] = $state([]);
   let versionsLoading = $state(false);
+
+  // Delete confirm state
+  let confirmOpen = $state(false);
+  let pendingProfile = $state<ProfileDTO | null>(null);
 
   async function loadVersions() {
     if (k3sVersions.length > 0) return;
@@ -85,8 +90,15 @@
     }
   }
 
-  async function deleteProfile(p: ProfileDTO) {
-    if (!confirm(`Delete profile "${p.name}"?`)) return;
+  function deleteProfile(p: ProfileDTO) {
+    pendingProfile = p;
+    confirmOpen = true;
+  }
+
+  async function performDeleteProfile() {
+    const p = pendingProfile;
+    pendingProfile = null;
+    if (!p) return;
     error = "";
     try {
       await ProfileService.DeleteProfile(p.name);
@@ -182,6 +194,16 @@
     </div>
   {/if}
 </div>
+
+<ConfirmDialog
+  bind:open={confirmOpen}
+  title="Delete profile"
+  message={`Delete profile "${pendingProfile?.name ?? ""}"?`}
+  confirmLabel="Delete"
+  danger
+  onconfirm={performDeleteProfile}
+  oncancel={() => { pendingProfile = null; }}
+/>
 
 <!-- Profile form overlay -->
 {#if showForm}
