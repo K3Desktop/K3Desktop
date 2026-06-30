@@ -788,6 +788,7 @@ export class NodeDTO {
     "role": string;
     "state": string;
     "image": string;
+    "k8sReady": boolean | null;
 
     /** Creates a new NodeDTO instance. */
     constructor($$source: Partial<NodeDTO> = {}) {
@@ -802,6 +803,9 @@ export class NodeDTO {
         }
         if (!("image" in $$source)) {
             this["image"] = "";
+        }
+        if (!("k8sReady" in $$source)) {
+            this["k8sReady"] = null;
         }
 
         Object.assign(this, $$source);

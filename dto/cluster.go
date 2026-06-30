@@ -1,10 +1,11 @@
 package dto
 
 type NodeDTO struct {
-	Name  string `json:"name"`
-	Role  string `json:"role"`
-	State string `json:"state"`
-	Image string `json:"image"`
+	Name     string `json:"name"`
+	Role     string `json:"role"`
+	State    string `json:"state"`
+	Image    string `json:"image"`
+	K8sReady *bool  `json:"k8sReady"`
 }
 
 type ClusterDTO struct {

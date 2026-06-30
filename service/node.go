@@ -13,6 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type NodeService struct{}
@@ -36,6 +37,27 @@ func (s *NodeService) ListNodes(ctx context.Context, clusterName string) ([]dto.
 			Image: n.Image,
 		})
 	}
+
+	anyRunning := false
+	for _, n := range result {
+		if n.State == "running" {
+			anyRunning = true
+			break
+		}
+	}
+	if anyRunning {
+		k8sCtx, k8sCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer k8sCancel()
+		if ready, err := fetchK8sReadiness(k8sCtx, c); err == nil {
+			for i := range result {
+				if v, ok := ready[result[i].Name]; ok {
+					b := v
+					result[i].K8sReady = &b
+				}
+			}
+		}
+	}
+
 	return result, nil
 }
 
@@ -247,6 +269,39 @@ func upgradeNodeSync(nodeName, image string) error {
 	}
 
 	return k3dclient.NodeDelete(ctx, rt, oldNode, k3d.NodeDeleteOpts{SkipLBUpdate: true})
+}
+
+// fetchK8sReadiness returns a map of node name → k8s Ready condition via one List() call.
+// Returns nil map + error if the k8s API is unreachable.
+func fetchK8sReadiness(ctx context.Context, cluster *k3d.Cluster) (map[string]bool, error) {
+	kubecfg, err := k3dclient.KubeconfigGet(ctx, GetRuntime(), cluster)
+	if err != nil {
+		return nil, err
+	}
+	restCfg, err := clientcmd.NewDefaultClientConfig(*kubecfg, nil).ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	kc, err := kubernetes.NewForConfig(restCfg)
+	if err != nil {
+		return nil, err
+	}
+	nodeList, err := kc.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[string]bool, len(nodeList.Items))
+	for _, node := range nodeList.Items {
+		ready := false
+		for _, cond := range node.Status.Conditions {
+			if cond.Type == corev1.NodeReady {
+				ready = cond.Status == corev1.ConditionTrue
+				break
+			}
+		}
+		result[node.Name] = ready
+	}
+	return result, nil
 }
 
 // cleanStaleNodeState removes k8s objects that would block a replacement container
