@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -82,6 +83,16 @@ func (s *ClusterService) CreateClusterAdvanced(ctx context.Context, req dto.Clus
 }
 
 func runCluster(ctx context.Context, sc confv1alpha5.SimpleConfig) (string, error) {
+	// Rootless engines can't open /dev/kmsg, so the kubelet aborts without this gate.
+	const rootlessArg = "--kubelet-arg=feature-gates=KubeletInUserNamespace=true"
+	if isRootlessEngine() && !slices.ContainsFunc(sc.Options.K3sOptions.ExtraArgs, func(a confv1alpha5.K3sArgWithNodeFilters) bool {
+		return strings.Contains(a.Arg, "KubeletInUserNamespace")
+	}) {
+		sc.Options.K3sOptions.ExtraArgs = append(sc.Options.K3sOptions.ExtraArgs, confv1alpha5.K3sArgWithNodeFilters{
+			Arg:         rootlessArg,
+			NodeFilters: []string{"server:*", "agent:*"},
+		})
+	}
 	clusterConfig, err := k3dconfig.TransformSimpleToClusterConfig(ctx, GetRuntime(), sc, "")
 	if err != nil {
 		return "", fmt.Errorf("config transform: %w", err)

@@ -65,6 +65,7 @@ wails3 generate bindings -clean=true -ts
 - `sigs.k8s.io/yaml` is an indirect dep; run `go get sigs.k8s.io/yaml` if a service file imports it directly
 - `k8s.io/client-go` and `k8s.io/apimachinery` are direct deps — use `kubernetes.NewForConfig` + `clientcmd.NewDefaultClientConfig(*kubecfg, nil).ClientConfig()` to talk to the cluster API programmatically; prefer this over `rt.ExecInNode` with `kubectl`
 - `service/kubeconfig.go` owns context CRUD (`ListContexts`, `SetCurrentContext`, `DeleteContext`); delete also prunes dangling cluster/user entries from the kubeconfig file
+- `service/runtime.go` auto-detects the Podman socket (`$XDG_RUNTIME_DIR/podman/podman.sock`, rootful fallback) when `DOCKER_HOST` is unset, and exports `DOCKER_SOCK` from a `unix://` `DOCKER_HOST` so k3d mounts the right socket into `k3d-tools`
 - `Dialog.OpenFile().AddFilter(displayName, pattern string)` — pattern is one string (`"*.yaml;*.yml"`), not variadic
 - Svelte `<script>` imports: omit `.ts` extension (requires `allowImportingTsExtensions` otherwise); `.svelte` extension is fine
 - `service/profile.go` owns `advancedRequestToSimpleConfig` / `simpleConfigToAdvancedRequest` — canonical mapping, don't duplicate
