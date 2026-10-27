@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	k3dclient "github.com/k3d-io/k3d/v5/pkg/client"
+	"github.com/k3d-io/k3d/v5/pkg/runtimes"
 	k3d "github.com/k3d-io/k3d/v5/pkg/types"
 	k3dversion "github.com/k3d-io/k3d/v5/version"
 	"github.com/k3desktop/k3desktop/dto"
@@ -302,6 +304,35 @@ func fetchK8sReadiness(ctx context.Context, cluster *k3d.Cluster) (map[string]bo
 		result[node.Name] = ready
 	}
 	return result, nil
+}
+
+// cleanStaleNodeStateViaServer is cleanStaleNodeState for when the loadbalancer is not
+// running: it runs the deletes with the kubectl bundled in the server container,
+// retrying while the apiserver is still warming up.
+func cleanStaleNodeStateViaServer(ctx context.Context, rt runtimes.Runtime, server *k3d.Node, nodeName string) error {
+	cmds := [][]string{
+		{"kubectl", "-n", "kube-system", "delete", "secret", nodeName + ".node-password.k3s", "--ignore-not-found"},
+		{"kubectl", "delete", "node", nodeName, "--ignore-not-found", "--wait=false"},
+	}
+	deadline := time.Now().Add(60 * time.Second)
+	for _, cmd := range cmds {
+		for {
+			err := rt.ExecInNode(ctx, server, cmd)
+			if err == nil {
+				break
+			}
+			if time.Now().After(deadline) {
+				return err
+			}
+			slog.Debug("retrying stale node cleanup", "node", nodeName, "err", err)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(2 * time.Second):
+			}
+		}
+	}
+	return nil
 }
 
 // cleanStaleNodeState removes k8s objects that would block a replacement container

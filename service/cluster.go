@@ -264,16 +264,28 @@ func startClusterSync(name string) error {
 	// in Kubernetes still carry the old IPs in flannel annotations, causing flannel to
 	// fail with "failed to find interface with specified node ip" and shut down k3s.
 	// Delete the stale Node objects so agents rejoin cleanly with their new IPs.
+	// This goes through the server container, not the host-published API port: that
+	// port belongs to the loadbalancer, which can only start after the agents (its
+	// nginx config names every node and fails on unresolvable ones).
+	// Failing here is fatal: agents started with stale state never become Ready.
 
 	slog.Debug("cleaning stale agent node state", "cluster", name)
+	var server *k3d.Node
+	for _, node := range c.Nodes {
+		if node.Role == k3d.ServerRole {
+			server = node
+			break
+		}
+	}
 	for _, node := range c.Nodes {
 		if node.Role != k3d.AgentRole {
 			continue
 		}
-		if err := cleanStaleNodeState(ctx, c, node.Name); err != nil {
-			// Non-fatal: log and continue. If the node object is missing or apiserver
-			// not yet ready, k3s will still attempt to start; the error will surface there.
-			slog.Warn("clean stale agent node state on cluster start", "node", node.Name, "err", err)
+		if server == nil {
+			return fmt.Errorf("cluster %s has no server node", name)
+		}
+		if err := cleanStaleNodeStateViaServer(ctx, rt, server, node.Name); err != nil {
+			return fmt.Errorf("clean stale state of agent %s: %w", node.Name, err)
 		}
 	}
 
