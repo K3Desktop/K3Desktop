@@ -9,7 +9,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types/network"
 	k3dclient "github.com/k3d-io/k3d/v5/pkg/client"
+	dockerrt "github.com/k3d-io/k3d/v5/pkg/runtimes/docker"
 	k3dconfig "github.com/k3d-io/k3d/v5/pkg/config"
 	k3dconfigtypes "github.com/k3d-io/k3d/v5/pkg/config/types"
 	confv1alpha5 "github.com/k3d-io/k3d/v5/pkg/config/v1alpha5"
@@ -93,6 +95,10 @@ func runCluster(ctx context.Context, sc confv1alpha5.SimpleConfig) (string, erro
 			NodeFilters: []string{"server:*", "agent:*"},
 		})
 	}
+	externalRegistries, err := attachExternalRegistries(ctx, &sc)
+	if err != nil {
+		return "", fmt.Errorf("external registries: %w", err)
+	}
 	clusterConfig, err := k3dconfig.TransformSimpleToClusterConfig(ctx, GetRuntime(), sc, "")
 	if err != nil {
 		return "", fmt.Errorf("config transform: %w", err)
@@ -137,6 +143,7 @@ func runCluster(ctx context.Context, sc confv1alpha5.SimpleConfig) (string, erro
 			}
 			return
 		}
+		connectExternalRegistries(context.Background(), clusterConfig.Cluster.Network.Name, externalRegistries)
 		if kubeconfigOpts.UpdateDefaultKubeconfig {
 			if _, err := k3dclient.KubeconfigGetWrite(
 				context.Background(),
@@ -203,7 +210,32 @@ func deleteClusterSync(name string) error {
 		}
 	}
 
+	disconnectForeignContainers(ctx, c)
+
 	return k3dclient.ClusterDelete(ctx, GetRuntime(), c, k3d.ClusterDeleteOpts{SkipRegistryCheck: false})
+}
+
+// disconnectForeignContainers detaches containers k3d doesn't manage (e.g. a
+// user's registry attached via registries.use) so the network can be removed.
+func disconnectForeignContainers(ctx context.Context, c *k3d.Cluster) {
+	dc, err := dockerrt.GetDockerClient()
+	if err != nil {
+		return
+	}
+	defer dc.Close()
+	nw, err := dc.NetworkInspect(ctx, c.Network.Name, network.InspectOptions{})
+	if err != nil {
+		return
+	}
+	for id, ep := range nw.Containers {
+		if slices.ContainsFunc(c.Nodes, func(n *k3d.Node) bool { return n.Name == ep.Name }) {
+			continue
+		}
+		slog.Info("disconnecting foreign container from cluster network", "container", ep.Name, "network", c.Network.Name)
+		if err := dc.NetworkDisconnect(ctx, nw.ID, id, true); err != nil {
+			slog.Warn("failed to disconnect container from network", "container", ep.Name, "err", err)
+		}
+	}
 }
 
 func (s *ClusterService) StartCluster(_ context.Context, name string) (string, error) {

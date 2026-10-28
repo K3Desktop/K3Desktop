@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import type { AdvState } from "./prefill.ts";
+  import { RegistryService } from "../../bindings/github.com/k3desktop/k3desktop/service";
 
   let {
     adv = $bindable(),
@@ -12,6 +14,25 @@
     versionsLoading?: boolean;
     datalistId?: string;
   } = $props();
+
+  // Registries that can be attached via `registries.use`: k3d-managed and plain registry containers.
+  let available: { name: string; detail: string; running: boolean; reason: string }[] = $state([]);
+  const selected = $derived(adv.registryUse.split(",").map((s) => s.trim()).filter(Boolean));
+
+  onMount(async () => {
+    const [k3dRegs, externalRegs] = await Promise.all([
+      RegistryService.ListRegistries().catch(() => []),
+      RegistryService.ListExternalRegistries().catch(() => []),
+    ]);
+    available = [
+      ...k3dRegs.map((r) => ({ name: r.name, detail: r.port ? `:${r.port}` : "", running: r.state === "running", reason: "" })),
+      ...externalRegs.map((r) => ({ name: r.name, detail: `${r.image} :${r.port}`, running: r.state === "running", reason: r.reason })),
+    ];
+  });
+
+  function toggleRegistry(name: string) {
+    adv.registryUse = (selected.includes(name) ? selected.filter((n) => n !== name) : [...selected, name]).join(",");
+  }
 
   function addRow(arr: { value: string; nodeFilters: string }[]) {
     arr.push({ value: "", nodeFilters: "" });
@@ -159,6 +180,22 @@
       <span class={label}>Create registry — name</span>
       <input bind:value={adv.registryCreate} class={input} placeholder="my-registry" />
     </label>
+    {#if available.length > 0}
+      <div class="col-span-2">
+        <span class={label}>Existing registries</span>
+        <div class="mt-1 space-y-1">
+          {#each available as reg (reg.name)}
+            <label class="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100 {reg.running && !reg.reason ? '' : 'opacity-50'}">
+              <input type="checkbox" checked={selected.includes(reg.name)} disabled={!reg.running || !!reg.reason} onchange={() => toggleRegistry(reg.name)} />
+              <span class="font-mono">{reg.name}</span>
+              <span class="text-gray-400">{reg.detail}</span>
+              {#if !reg.running}<span class="text-xs text-gray-400">(stopped — start it first)</span>
+              {:else if reg.reason}<span class="text-xs text-gray-400">({reg.reason})</span>{/if}
+            </label>
+          {/each}
+        </div>
+      </div>
+    {/if}
     <label class="block">
       <span class={label}>Use registries <span class="text-gray-400">(comma-separated)</span></span>
       <input bind:value={adv.registryUse} class={input} placeholder="k3d-reg1,k3d-reg2" />

@@ -17,12 +17,24 @@ export function DeleteRegistry(name: string): $CancellablePromise<string> {
     return $Call.ByID(1273757037, name);
 }
 
-export function ListRegistries(): $CancellablePromise<dto$0.RegistryDTO[]> {
-    return $Call.ByID(3386377894).then(($result: any) => {
+/**
+ * ListExternalRegistries returns registry containers not managed by k3d that
+ * k3d can attach to a cluster via `registries.use`.
+ */
+export function ListExternalRegistries(): $CancellablePromise<dto$0.ExternalRegistryDTO[]> {
+    return $Call.ByID(3231010957).then(($result: any) => {
         return $$createType1($result);
     });
 }
 
+export function ListRegistries(): $CancellablePromise<dto$0.RegistryDTO[]> {
+    return $Call.ByID(3386377894).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
 // Private type creation functions
-const $$createType0 = dto$0.RegistryDTO.createFrom;
+const $$createType0 = dto$0.ExternalRegistryDTO.createFrom;
 const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = dto$0.RegistryDTO.createFrom;
+const $$createType3 = $Create.Array($$createType2);

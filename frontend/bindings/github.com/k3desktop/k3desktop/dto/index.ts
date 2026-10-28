@@ -10,6 +10,7 @@ export {
     ClusterCreateAdvancedRequest,
     ClusterCreateRequest,
     ClusterDTO,
+    ExternalRegistryDTO,
     FileDTO,
     HostAliasDTO,
     KubeconfigContextDTO,

@@ -590,6 +590,58 @@ export class ClusterDTO {
     }
 }
 
+/**
+ * ExternalRegistryDTO is a registry container not managed by k3d that can be attached to a cluster.
+ */
+export class ExternalRegistryDTO {
+    "name": string;
+    "image": string;
+    "port": number;
+
+    /**
+     * InternalPort is the port the registry listens on inside the container network.
+     */
+    "internalPort": number;
+    "state": string;
+
+    /**
+     * Reason is set when the container cannot be joined to a cluster network.
+     */
+    "reason": string;
+
+    /** Creates a new ExternalRegistryDTO instance. */
+    constructor($$source: Partial<ExternalRegistryDTO> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("image" in $$source)) {
+            this["image"] = "";
+        }
+        if (!("port" in $$source)) {
+            this["port"] = 0;
+        }
+        if (!("internalPort" in $$source)) {
+            this["internalPort"] = 0;
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+        if (!("reason" in $$source)) {
+            this["reason"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ExternalRegistryDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ExternalRegistryDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ExternalRegistryDTO($$parsedSource as Partial<ExternalRegistryDTO>);
+    }
+}
+
 export class FileDTO {
     "source": string;
     "destination": string;
